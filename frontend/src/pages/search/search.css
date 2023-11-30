@@ -1,0 +1,60 @@
+.search-select span{
+    font-size: 15px;
+    color: rgba(0, 0, 0, 0.88);
+}
+.search-senior-body{
+    position: relative;
+    left: -2.4em;
+    display: flex;
+    flex-direction: column;
+    row-gap: 1.2em;
+    margin-top: 0.1em;
+}
+.senior-time-text{
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.45);
+    font-weight: 600;
+}
+.senior-time-tag{
+    background-color: white;
+    border-radius: 6px 0 0 6px;
+    border: #d9d9d9 1px solid;
+    border-right: none;
+    display: flex;
+    align-items: center;
+    padding: 0 0.5em;
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.45);
+}
+.search-ai-img{
+    width: 2em;
+    height: 2em;
+    margin-right: 0.3em;
+}
+.search-ai-img:hover{
+    cursor: pointer;
+    opacity: 0.9;
+}
+.search-recommend{
+    margin-top: 3em;
+    min-width: 52em;
+    overflow: hidden;
+}
+.search-recommend-line{
+    /* background-color: #7464FA; */
+    background:  linear-gradient(to right, #7464FA 30%, rgb(199, 189, 211));
+    height:1em;
+    width: 110%;
+    position: relative;
+    top: -2.3em;
+    left: -2em;
+}
+.search-recommend-head{
+    display: flex;
+    justify-content: space-between;
+}
+.search-recommend-list{
+    display: flex;
+    flex-direction: column;
+    align-items: baseline;
+}
