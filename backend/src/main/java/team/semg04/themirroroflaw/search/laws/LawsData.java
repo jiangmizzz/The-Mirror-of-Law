@@ -6,7 +6,8 @@ import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 
-import java.util.Date;
+import java.time.LocalDate;
+
 
 @Data
 @Document(indexName = "laws")
@@ -16,14 +17,16 @@ public class LawsData {
 
     @Field(name = "title", type = FieldType.Text)
     private String title;
+    @Field(name = "level", type = FieldType.Text)
+    private String level;
     @Field(name = "office", type = FieldType.Keyword)
     private String office;
     @Field(name = "publish", type = FieldType.Date)
-    private Date publish;
+    private LocalDate publish;
     @Field(name = "expiry", type = FieldType.Date)
-    private Date expiry;
-    @Field(name = "type", type = FieldType.Byte)
-    private Byte type;
+    private LocalDate expiry;
+    @Field(name = "type", type = FieldType.Binary)
+    private String type;
     @Field(name = "status", type = FieldType.Byte)
     private Byte status;
     @Field(name = "content", type = FieldType.Text)

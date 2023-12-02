@@ -27,3 +27,10 @@ springdoc.default-produces-media-type=application/json
 ### 编译运行
 
 项目使用`Gradle`进行构建，请自行参考`Gradle`的使用方法。或使用`IntelliJ IDEA`打开项目，使用`IDEA`自带的`Gradle`插件进行构建。
+
+## 接口文档
+
+默认配置下，接口文档地址为：
+
+- swagger-ui：[http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+- api-docs：[http://localhost:8080/api-docs](http://localhost:8080/api-docs)

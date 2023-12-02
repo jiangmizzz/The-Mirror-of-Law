@@ -1,27 +1,180 @@
 package team.semg04.themirroroflaw.search;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.query.Query;
+import org.springframework.data.elasticsearch.core.query.StringQuery;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import team.semg04.themirroroflaw.search.laws.LawsRepo;
+import team.semg04.themirroroflaw.Response;
+import team.semg04.themirroroflaw.search.laws.LawsData;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+
+@Slf4j
 @RestController
 @RequestMapping("/api/search")
-@Tag(name = "Search", description = "Search for everything")
+@Tag(name = "Search", description = "搜索结果处理")
 public class SearchController {
 
-    private LawsRepo lawsRepo;
+    private ElasticsearchOperations elasticsearchOperations;
 
     @Autowired
-    public void setLawsRepo(LawsRepo lawsRepo) {
-        this.lawsRepo = lawsRepo;
+    public void setElasticsearchOperations(ElasticsearchOperations elasticsearchOperations) {
+        this.elasticsearchOperations = elasticsearchOperations;
     }
 
-    // FIXME: This is just a demo, please delete it later
-    @PostMapping("/laws")
-    public String searchLaws(String keyword) {
-        return lawsRepo.findByTitle(keyword).toString();
+    @Operation(summary = "搜索结果列表展示", description =
+            "对于给定的输入量和筛选条件（包括搜索类型、高级搜索中的规定），返回以合适的顺序完成排序的搜索结果列表，为方便查看，采用分页展示。")
+    @Parameters({
+            @Parameter(name = "input", description = "用户在输入框中输入的内容"),
+            @Parameter(name = "searchType", description = "搜索类型"),
+            @Parameter(name = "filters", description = "筛选条件", content =
+            @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = Filters.class))),
+            @Parameter(name = "pageSize", description = "每页条数"),
+            @Parameter(name = "pageNumber", description = "第x页，从0开始")
+    })
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "成功"),
+            @ApiResponse(responseCode = "400", description = "请求参数错误", content = @Content(schema =
+            @Schema(implementation = Response.class))),
+            @ApiResponse(responseCode = "500", description = "服务器内部错误", content = @Content(schema =
+            @Schema(implementation = Response.class)))
+    })
+    @GetMapping("/list")
+    public ResponseEntity<Response<SearchList>> searchLaws(@RequestParam(name = "input") String input,
+                                                           @RequestParam(name = "searchType") SearchType searchType,
+                                                           @RequestParam(name = "filters") String filtersString,
+                                                           @RequestParam(name = "pageSize") Integer pageSize,
+                                                           @RequestParam(name = "pageNumber") Integer pageNumber) {
+        try {
+            SearchList searchList = new SearchList();
+            searchList.setResults(new ArrayList<>());
+            searchList.setTotal(0);
+            ObjectMapper objectMapper = new ObjectMapper();
+            Filters filters = objectMapper.readValue(filtersString, Filters.class);
+            Pageable pageable = Pageable.ofSize(pageSize).withPage(pageNumber);
+            for (ResultType type : filters.getResultType()) {
+                if (type == ResultType.LAW) {
+                    String fields = switch (searchType) {
+                        case CONTENT -> "content";
+                        case TITLE -> "title";
+                        case SOURCE -> "office";
+                    };
+                    Query searchQuery = new StringQuery("""
+                            {
+                                "bool": {
+                                    "must": [
+                                        {
+                                            "simple_query_string": {
+                                                "query": "%s",
+                                                "fields": ["%s"],
+                                                "flags": ""
+                                            }
+                                        }
+                                    ],
+                                    "filter": [
+                                        {
+                                            "range": {
+                                                "publish": {
+                                                    "gte": "%s",
+                                                    "lte": "%s"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                            """.formatted(input, fields, filters.getStartTime(), filters.getEndTime()), pageable);
+                    SearchHits<LawsData> lawsData = elasticsearchOperations.search(searchQuery, LawsData.class);
+                    searchList.setTotal(searchList.getTotal() + (int) lawsData.getTotalHits());
+                    for (SearchHit<LawsData> data : lawsData) {
+                        SearchList.ResultItem resultItem = new SearchList.ResultItem();
+                        resultItem.setId(data.getContent().getId());
+                        resultItem.setTitle(data.getContent().getTitle());
+                        resultItem.setDescription(data.getContent().getContent());
+                        resultItem.setDate(data.getContent().getPublish());
+                        resultItem.setSource(data.getContent().getOffice());
+                        searchList.getResults().add(resultItem);
+                    }
+                } else if (type == ResultType.JUDGEMENT) {
+                    return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.toString(), "Not " +
+                            "implemented."), HttpStatus.BAD_REQUEST);
+                }
+            }
+            log.info("Get search result list success. Total: " + searchList.getTotal());
+            return new ResponseEntity<>(new Response<>(true, searchList, HttpStatus.OK.toString(), "Success."),
+                    HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("Get search result list error: " + e.getMessage());
+            return new ResponseEntity<>(new Response<>(false, null, HttpStatus.INTERNAL_SERVER_ERROR.toString(),
+                    "Internal server error."), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public enum SearchType {
+        CONTENT, TITLE, SOURCE
+    }
+
+    public enum ResultType {
+        LAW, JUDGEMENT
+    }
+
+    @Data
+    public static class Filters {
+        private List<ResultType> resultType;
+        // LocalDataTime is not supported by default
+        @JsonSerialize(using = LocalDateSerializer.class)
+        @JsonDeserialize(using = LocalDateDeserializer.class)
+        private LocalDate startTime;
+        @JsonSerialize(using = LocalDateSerializer.class)
+        @JsonDeserialize(using = LocalDateDeserializer.class)
+        private LocalDate endTime;
+    }
+
+    @Data
+    public static class SearchList {
+        private List<ResultItem> results;
+        private Integer total;
+
+        @Data
+        public static class ResultItem {
+            private String id;
+            private String title;
+            private String description;
+            private LocalDate date;
+            private String source;
+
+            @Data
+            public static class feedbackCnt {
+                private Integer like;
+                private Integer dislike;
+            }
+        }
     }
 }

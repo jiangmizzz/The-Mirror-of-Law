@@ -1,8 +1,13 @@
 package team.semg04.themirroroflaw;
 
-public class Response {
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
+@Data
+@AllArgsConstructor
+public class Response<T> {
     private Boolean success;
-    private Object data;
+    private T data;
     private String errorCode;
     private String errorMessage;
 }
