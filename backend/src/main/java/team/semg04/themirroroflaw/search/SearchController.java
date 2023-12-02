@@ -120,6 +120,10 @@ public class SearchController {
                         resultItem.setDescription(data.getContent().getContent());
                         resultItem.setDate(data.getContent().getPublish());
                         resultItem.setSource(data.getContent().getOffice());
+                        resultItem.setResultType(ResultType.LAW.ordinal());
+                        resultItem.setFeedbackCnt(new FeedbackCnt());
+                        resultItem.getFeedbackCnt().setLikes(data.getContent().getLike());
+                        resultItem.getFeedbackCnt().setDislikes(data.getContent().getDislike());
                         searchList.getResults().add(resultItem);
                     }
                 } else if (type == ResultType.JUDGEMENT) {
@@ -128,10 +132,50 @@ public class SearchController {
                 }
             }
             log.info("Get search result list success. Total: " + searchList.getTotal());
-            return new ResponseEntity<>(new Response<>(true, searchList, HttpStatus.OK.toString(), "Success."),
+            return new ResponseEntity<>(new Response<>(true, searchList, "0", "Success."),
                     HttpStatus.OK);
         } catch (Exception e) {
             log.error("Get search result list error: " + e.getMessage());
+            return new ResponseEntity<>(new Response<>(false, null, HttpStatus.INTERNAL_SERVER_ERROR.toString(),
+                    "Internal server error."), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @Operation(summary = "结果详情展示", description = "用户点击搜索结果列表中的某一条后，即可进入详情页查看详细内容，这些内容应以合适的格式整理并呈现。")
+    @Parameters({
+            @Parameter(name = "id", description = "内容的id")
+    })
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "成功"),
+            @ApiResponse(responseCode = "404", description = "内容不存在", content = @Content(schema =
+            @Schema(implementation = Response.class))),
+            @ApiResponse(responseCode = "500", description = "服务器内部错误", content = @Content(schema =
+            @Schema(implementation = Response.class)))
+    })
+    @GetMapping("/detail")
+    public ResponseEntity<Response<Detail>> searchDetail(@RequestParam(name = "id") String id) {
+        try {
+            Detail detail = new Detail();
+            LawsData lawsData = elasticsearchOperations.get(id, LawsData.class);
+            if (lawsData == null) {
+                log.error("Get search result detail error: LawsData not found. Id: " + id);
+                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.NOT_FOUND.toString(),
+                        "LawsData not found."), HttpStatus.NOT_FOUND);
+            }
+            detail.setTitle(lawsData.getTitle());
+            detail.setSource(lawsData.getOffice());
+            detail.setPublishTime(lawsData.getPublish());
+            detail.setFeedbackCnt(new FeedbackCnt());
+            detail.getFeedbackCnt().setLikes(lawsData.getLike());
+            detail.getFeedbackCnt().setDislikes(lawsData.getDislike());
+            detail.setContent(lawsData.getContent());
+            detail.setResultType(ResultType.LAW.ordinal());
+            detail.setLink(lawsData.getUrl());
+            log.info("Get search result detail success. Id: " + id);
+            return new ResponseEntity<>(new Response<>(true, detail, "0", "Success."),
+                    HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("Get search result detail error: " + e.getMessage());
             return new ResponseEntity<>(new Response<>(false, null, HttpStatus.INTERNAL_SERVER_ERROR.toString(),
                     "Internal server error."), HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -143,6 +187,17 @@ public class SearchController {
 
     public enum ResultType {
         LAW, JUDGEMENT
+    }
+
+    @Data
+    public static class Detail {
+        private String title;
+        private String source;
+        private LocalDate publishTime;
+        private FeedbackCnt feedbackCnt;
+        private String content;
+        private Integer resultType;
+        private String link;
     }
 
     @Data
@@ -168,13 +223,15 @@ public class SearchController {
             private String title;
             private String description;
             private LocalDate date;
+            private Integer resultType;
             private String source;
-
-            @Data
-            public static class feedbackCnt {
-                private Integer like;
-                private Integer dislike;
-            }
+            private FeedbackCnt feedbackCnt;
         }
+    }
+
+    @Data
+    public static class FeedbackCnt {
+        private Integer likes;
+        private Integer dislikes;
     }
 }
