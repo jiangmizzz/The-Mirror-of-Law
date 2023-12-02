@@ -1,3 +1,5 @@
+src/main/resources/application.properties
+logs/
 HELP.md
 .gradle
 build/
