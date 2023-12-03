@@ -1,0 +1,8 @@
+.drawer-search {
+  margin-top: auto; /* 将 margin-top 设置为 auto，使其位于页脚 */
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+}
