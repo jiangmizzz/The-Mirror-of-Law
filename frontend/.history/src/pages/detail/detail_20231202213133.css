@@ -1,0 +1,9 @@
+.document-box {
+  background-color: red;
+}
+
+.document-box {
+  background-color: yellow;
+  margin-top: 20px;
+  width: 90%;
+}

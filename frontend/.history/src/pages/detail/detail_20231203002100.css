@@ -1,0 +1,6 @@
+.drawer-search {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  alignitems: 'flex-end';
+}

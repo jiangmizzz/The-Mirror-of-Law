@@ -1,0 +1,5 @@
+.drawer-search {
+  display: flex;
+  flex-direction: column;
+  alignitems: 'flex-end';
+}

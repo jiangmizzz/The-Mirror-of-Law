@@ -1,0 +1,20 @@
+.favorite .ant-btn-link {
+  font-size: 16px; /* 调整字体大小 */
+}
+
+.favorite .anticon-star.active {
+  fill: #c3b8ff; /* 填充颜色，你可以根据需要更改颜色 */
+}
+
+.favorite .ant-btn-link:hover {
+  color: #1890ff; /* 鼠标悬停时的文本颜色，你可以根据需要更改颜色 */
+}
+
+.star {
+  padding-right: 5px;
+}
+
+.star active {
+  padding-right: 5px;
+  color: #c3b8ff;
+}
