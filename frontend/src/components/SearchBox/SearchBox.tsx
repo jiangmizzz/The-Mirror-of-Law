@@ -21,6 +21,7 @@ import { useNavigate } from "react-router-dom";
 
 const { RangePicker } = DatePicker;
 //子组件，搜索组件
+//TODO:设置默认值
 export default function SearchBox(props: { width: number }) {
   const resultTypeOptions = [
     "法律法规",
@@ -76,7 +77,11 @@ export default function SearchBox(props: { width: number }) {
     };
     return (
       <>
-        <div className="search-senior-body">
+        <div
+          className={`${"search-senior-body"} ${
+            props.width >= 500 ? "search-senior-offset" : ""
+          }`}
+        >
           <Space>
             <Checkbox
               indeterminate={indeterminate}
@@ -134,7 +139,7 @@ export default function SearchBox(props: { width: number }) {
       </>
     );
   }
-  //处理搜索参数，并跳转到搜索结果页
+  //TODO:处理搜索参数，并跳转到搜索结果页
   function handleSearch() {
     console.log(
       "search!",
@@ -151,13 +156,16 @@ export default function SearchBox(props: { width: number }) {
     <>
       <Space style={{ height: "50px" }}>
         {/* 加投影一直有缝隙，放弃了 */}
-        <Tooltip title="AI辅助" overlayStyle={{ fontSize: "12px" }}>
-          <img
-            src={aiIcon}
-            className="search-ai-img"
-            onClick={() => setAi(true)}
-          />
-        </Tooltip>
+        {/* 用一种抽象的方法判断AI图标在不同页面的放置位置 */}
+        {props.width >= 500 && (
+          <Tooltip title="AI辅助" overlayStyle={{ fontSize: "12px" }}>
+            <img
+              src={aiIcon}
+              className="search-ai-img"
+              onClick={() => setAi(true)}
+            />
+          </Tooltip>
+        )}
         <Drawer
           title="AI智能关键词提取"
           placement="right"
@@ -215,8 +223,16 @@ export default function SearchBox(props: { width: number }) {
             </Button>
           )}
         </Space.Compact>
+        {props.width < 500 && (
+          <Tooltip title="AI辅助" overlayStyle={{ fontSize: "12px" }}>
+            <img
+              src={aiIcon}
+              className="search-ai-img"
+              onClick={() => setAi(true)}
+            />
+          </Tooltip>
+        )}
       </Space>
-
       {ifSenior && <SeniorSearch />}
     </>
   );

@@ -4,11 +4,12 @@ import { StarTwoTone, InfoCircleOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import "./search.css";
 import SearchBox from "../../components/SearchBox/SearchBox";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export default function SearchPage() {
   //子组件，推送组件
   function Recommend() {
+    const location = useLocation(); //模拟页面栈
     const navigate = useNavigate(); //导航到其他页面
     const [recommendList, setRecommendList] = useState<
       { title: string; id: number }[]
@@ -61,7 +62,9 @@ export default function SearchPage() {
                   key={item.id}
                   type="link"
                   onClick={() => {
-                    navigate(`/detail/${item.id}`);
+                    navigate(`/detail/${item.id}`, {
+                      state: { previousLocation: location.pathname },
+                    });
                   }}
                 >
                   {index + 1 + ". " + item.title}

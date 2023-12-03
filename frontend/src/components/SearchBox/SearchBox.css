@@ -3,12 +3,14 @@
     color: rgba(0, 0, 0, 0.88);
 }
 .search-senior-body{
-    position: relative;
-    left: -2.4em;
     display: flex;
     flex-direction: column;
     row-gap: 1.2em;
     margin-top: 0.1em;
+}
+.search-senior-offset{
+        position: relative;
+    left: -2.4em;
 }
 .senior-time-text{
     font-size: 13px;
