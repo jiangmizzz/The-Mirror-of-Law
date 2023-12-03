@@ -1,5 +1,6 @@
 package team.semg04.themirroroflaw.search;
 
+import co.elastic.clients.json.JsonData;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
@@ -17,11 +18,15 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.query.HighlightQuery;
 import org.springframework.data.elasticsearch.core.query.Query;
-import org.springframework.data.elasticsearch.core.query.StringQuery;
+import org.springframework.data.elasticsearch.core.query.highlight.Highlight;
+import org.springframework.data.elasticsearch.core.query.highlight.HighlightField;
+import org.springframework.data.elasticsearch.core.query.highlight.HighlightParameters;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -30,7 +35,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import team.semg04.themirroroflaw.Response;
-import team.semg04.themirroroflaw.search.laws.LawsData;
+import team.semg04.themirroroflaw.search.data.LawsData;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -79,6 +84,9 @@ public class SearchController {
             ObjectMapper objectMapper = new ObjectMapper();
             Filters filters = objectMapper.readValue(filtersString, Filters.class);
             Pageable pageable = Pageable.ofSize(pageSize).withPage(pageNumber);
+            HighlightParameters highlightParameters =
+                    HighlightParameters.builder().withBoundaryScannerLocale("zh-cn").withBoundaryChars(".,!?; " +
+                            "\t\n，。！？；").withPreTags("").withPostTags("").build();
             for (ResultType type : filters.getResultType()) {
                 if (type == ResultType.LAW) {
                     String fields = switch (searchType) {
@@ -86,38 +94,28 @@ public class SearchController {
                         case TITLE -> "title";
                         case SOURCE -> "office";
                     };
-                    Query searchQuery = new StringQuery("""
-                            {
-                                "bool": {
-                                    "must": [
-                                        {
-                                            "simple_query_string": {
-                                                "query": "%s",
-                                                "fields": ["%s"],
-                                                "flags": ""
-                                            }
-                                        }
-                                    ],
-                                    "filter": [
-                                        {
-                                            "range": {
-                                                "publish": {
-                                                    "gte": "%s",
-                                                    "lte": "%s"
-                                                }
-                                            }
-                                        }
-                                    ]
-                                }
-                            }
-                            """.formatted(input, fields, filters.getStartTime(), filters.getEndTime()), pageable);
+                    List<HighlightField> highlightFields = List.of(new HighlightField("content"));
+                    Query searchQuery =
+                            NativeQuery.builder().withQuery(query -> query.match(match -> match.field(fields).query(input)))
+                                    .withFilter(filter -> filter.range(range -> range.field("publish")
+                                            .gte(JsonData.of(filters.getStartTime().toString()))
+                                            .lte(JsonData.of(filters.getEndTime().toString()))))
+                                    .withHighlightQuery(new HighlightQuery(new Highlight(highlightParameters,
+                                            highlightFields), null))    // HighlightQuery的第二个参数我不知道是干啥的，反正放个null也行
+                                    .withPageable(pageable).build();
                     SearchHits<LawsData> lawsData = elasticsearchOperations.search(searchQuery, LawsData.class);
                     searchList.setTotal(searchList.getTotal() + (int) lawsData.getTotalHits());
                     for (SearchHit<LawsData> data : lawsData) {
                         SearchList.ResultItem resultItem = new SearchList.ResultItem();
                         resultItem.setId(data.getContent().getId());
                         resultItem.setTitle(data.getContent().getTitle());
-                        resultItem.setDescription(data.getContent().getContent());
+                        if (fields.equals("content")) {
+                            resultItem.setDescription(String.join("...", data.getHighlightField(fields)).replaceAll(
+                                    "\n", ""));
+                        } else {
+                            resultItem.setDescription(data.getContent().getContent().substring(0, 100).replaceAll("\n"
+                                    , ""));
+                        }
                         resultItem.setDate(data.getContent().getPublish());
                         resultItem.setSource(data.getContent().getOffice());
                         resultItem.setResultType(ResultType.LAW.ordinal());
