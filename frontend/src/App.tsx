@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import './App.css';
-import './assets/reset.css';
+import React, { useState } from "react";
+import "./App.css";
+import "./assets/reset.css";
 import {
   Button,
   ConfigProvider,
@@ -13,8 +13,8 @@ import {
   Dropdown,
   Divider,
   Tooltip,
-} from 'antd';
-import type { MenuProps } from 'antd';
+} from "antd";
+import type { MenuProps } from "antd";
 import {
   BellOutlined,
   DownOutlined,
@@ -22,18 +22,18 @@ import {
   LogoutOutlined,
   SettingOutlined,
   HomeOutlined,
-} from '@ant-design/icons';
-import { Link, Navigate, Route, Routes } from 'react-router-dom';
-import SearchPage from './pages/search/search';
-import ResultsPage from './pages/results/results';
-import DetailPage from './pages/detail/detail';
+} from "@ant-design/icons";
+import { Link, Navigate, Route, Routes } from "react-router-dom";
+import SearchPage from "./pages/search/search";
+import ResultsPage from "./pages/results/results";
+import DetailPage from "./pages/detail/detail";
 
 const { Header, Content, Footer } = Layout;
 const { Text } = Typography;
 const { useToken } = theme;
-const items: MenuProps['items'] = [
+const items: MenuProps["items"] = [
   {
-    key: '1',
+    key: "1",
     label: (
       <Space align="center">
         <UserOutlined />
@@ -42,7 +42,7 @@ const items: MenuProps['items'] = [
     ),
   },
   {
-    key: '2',
+    key: "2",
     label: (
       <Space align="center">
         <SettingOutlined />
@@ -65,7 +65,7 @@ const App: React.FC = () => {
     };
 
     const menuStyle: React.CSSProperties = {
-      boxShadow: 'none',
+      boxShadow: "none",
     };
     if (!ifLogin) {
       return (
@@ -91,7 +91,7 @@ const App: React.FC = () => {
                         style={{
                           paddingLeft: 8,
                           paddingRight: 8,
-                          border: 'none',
+                          border: "none",
                         }}
                       >
                         退出登录
@@ -104,16 +104,16 @@ const App: React.FC = () => {
               <Space align="center" className="app-user-block">
                 <Avatar
                   style={{
-                    backgroundColor: '#7464FA',
-                    verticalAlign: 'middle',
+                    backgroundColor: "#7464FA",
+                    verticalAlign: "middle",
                   }}
                   size="large"
                   gap={2}
                 >
-                  {'UserName'.charAt(0)}
+                  {"UserName".charAt(0)}
                 </Avatar>
-                <Text style={{ color: '#ffffff' }}>UserName</Text>
-                <DownOutlined style={{ color: '#ffffff' }} />
+                <Text style={{ color: "#ffffff" }}>UserName</Text>
+                <DownOutlined style={{ color: "#ffffff" }} />
               </Space>
             </Dropdown>
           </Space>
@@ -137,9 +137,9 @@ const App: React.FC = () => {
         theme={{
           algorithm: theme.defaultAlgorithm,
           token: {
-            colorPrimary: '#7464FA',
-            colorLink: '#7464FA',
-            colorInfo: '#7464FA',
+            colorPrimary: "#7464FA",
+            colorLink: "#7464FA",
+            colorInfo: "#7464FA",
           },
           components: {
             Layout: {
@@ -149,15 +149,15 @@ const App: React.FC = () => {
           },
         }}
       >
-        <Layout style={{ minHeight: '100vh' }}>
+        <Layout style={{ minHeight: "100vh" }}>
           <Header
             style={{
-              position: 'sticky',
+              position: "sticky",
               top: 0,
               zIndex: 1,
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
             }}
           >
             {/* 跳转回搜索页 */}
@@ -181,9 +181,10 @@ const App: React.FC = () => {
           </Content>
           <Footer
             style={{
-              textAlign: 'center',
-              background: 'linear-gradient(to bottom right, #8832b7, #7464fa)',
-              color: 'white',
+              textAlign: "center",
+              //dbq这部分样式我感觉有点太鲜艳了，先注释一下
+              // background: "linear-gradient(to bottom right, #8832b7, #7464fa)",
+              // color: "white",
             }}
             className="footer"
           >

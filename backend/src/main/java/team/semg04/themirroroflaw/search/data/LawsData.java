@@ -1,4 +1,4 @@
-package team.semg04.themirroroflaw.search.laws;
+package team.semg04.themirroroflaw.search.data;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;
