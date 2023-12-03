@@ -1,16 +1,15 @@
 // ThumbButtons.tsx： 点赞和点踩 子功能组件
-import React, { useState } from 'react';
-import { Button, message, Space, Rate } from 'antd';
+import React, { useState } from "react";
+import { Button, message, Space, Rate } from "antd";
 import {
   LikeOutlined,
   DislikeOutlined,
   FrownOutlined,
   MehOutlined,
   SmileOutlined,
-} from '@ant-design/icons';
-import './ThumbButtons.css';
-import axios from 'axios';
-import FavoriteButton from './favorite';
+} from "@ant-design/icons";
+import "./ThumbButtons.css";
+import FavoriteButton from "./favorite";
 
 // Props 接口
 interface ThumbButtonsProps {
@@ -43,9 +42,9 @@ const ThumbButtons: React.FC<ThumbButtonsProps> = ({
 
     if (!isUserLoggedIn) {
       // 如果未登录，重定向到登录页面
-      message.warning('请先登录！');
+      message.warning("请先登录！");
       // 跳转到登录界面（TODO: /login 界面还未设计）
-      window.location.href = '/login';
+      window.location.href = "/login";
       return;
     }
 
@@ -86,34 +85,34 @@ const ThumbButtons: React.FC<ThumbButtonsProps> = ({
 
     try {
       // 发送 POST 请求
-      const response = await axios.post('/api/search/feedback', requestData);
+      // const response = await axios.post('/api/search/feedback', requestData);
 
       // 处理成功响应
-      console.log(response.data); // 根据需要处理后端返回的数据
+      //console.log(response.data); // 根据需要处理后端返回的数据
 
       // TODO: 到时候要把前面的逻辑块放到这里
 
-      message.success('操作成功！');
+      message.success("操作成功！");
     } catch (error: any) {
       // 处理请求错误
-      console.error('Error sending feedback:', error);
+      console.error("Error sending feedback:", error);
 
       if (error.response && error.response.status === 401) {
         // 未登录的错误处理
-        message.error('未登录，请先登录！');
-        window.location.href = '/login';
+        message.error("未登录，请先登录！");
+        window.location.href = "/login";
       } else {
-        message.error('操作失败，请稍后重试！');
+        message.error("操作失败，请稍后重试！");
       }
     }
   };
 
   return (
     <div>
-      <Space size={'large'}>
+      <Space size={"large"}>
         <Button
           className="thumb-button"
-          type={userLiked === true ? 'primary' : 'default'}
+          type={userLiked === true ? "primary" : "default"}
           icon={<LikeOutlined />}
           onClick={() => handleThumbClick(true)}
         >
@@ -121,7 +120,7 @@ const ThumbButtons: React.FC<ThumbButtonsProps> = ({
         </Button>
         <Button
           className="thumb-button"
-          type={userLiked === false ? 'primary' : 'default'}
+          type={userLiked === false ? "primary" : "default"}
           icon={<DislikeOutlined />}
           onClick={() => handleThumbClick(false)}
         >
@@ -133,11 +132,13 @@ const ThumbButtons: React.FC<ThumbButtonsProps> = ({
         <Space>
           <Rate
             defaultValue={4}
+            //@ts-ignore
             character={({ index }: { index: number }) => index + 1}
           />
           <br />
           <Rate
             defaultValue={4}
+            //@ts-ignore
             character={({ index }: { index: number }) => customIcons[index + 1]}
           />
         </Space>
