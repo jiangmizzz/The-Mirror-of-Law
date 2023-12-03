@@ -22,6 +22,9 @@ springdoc.api-docs.path=/api-docs
 springdoc.swagger-ui.path=/swagger-ui.html
 springdoc.default-consumes-media-type=application/json
 springdoc.default-produces-media-type=application/json
+#-----FOR DEBUGGING-----#
+#logging.level.tracer=TRACE
+#-----------------------#
 ```
 
 ### 编译运行

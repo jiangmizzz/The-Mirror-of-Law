@@ -35,7 +35,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import team.semg04.themirroroflaw.Response;
-import team.semg04.themirroroflaw.search.laws.LawsData;
+import team.semg04.themirroroflaw.search.data.LawsData;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -86,8 +86,7 @@ public class SearchController {
             Pageable pageable = Pageable.ofSize(pageSize).withPage(pageNumber);
             HighlightParameters highlightParameters =
                     HighlightParameters.builder().withBoundaryScannerLocale("zh-cn").withBoundaryChars(".,!?; " +
-                                    "\t\n，。！？；")
-                            .withPreTags("<span style=\"color: #ff0000\">").withPostTags("</span>").build();
+                            "\t\n，。！？；").withPreTags("").withPostTags("").build();
             for (ResultType type : filters.getResultType()) {
                 if (type == ResultType.LAW) {
                     String fields = switch (searchType) {
