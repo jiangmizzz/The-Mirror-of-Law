@@ -23,9 +23,10 @@ body{
 }
 .result-header-logo{
     position: relative;
-    top: 0.2em;
-    font-size: 2em;
+    top: 0.4em;
+    /* font-size: 2em; */
     margin-right: 0.7em;
+    /* height: 1em; */
     /* background-color: aqua; */
 }
 .result-header-divider{

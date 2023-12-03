@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import "./search.css";
 import SearchBox from "../../components/SearchBox/SearchBox";
 import { useLocation, useNavigate } from "react-router-dom";
+import logo from "../../assets/main-logo.svg";
 
 export default function SearchPage() {
   //子组件，推送组件
@@ -79,7 +80,9 @@ export default function SearchPage() {
 
   return (
     <>
-      <div style={{ fontSize: "19em" }}>LOGO</div>
+      <div>
+        <img src={logo} style={{ height: "19em" }} />
+      </div>
       {<SearchBox width={500} />}
       {<Recommend />}
     </>

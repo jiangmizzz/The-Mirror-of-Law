@@ -18,6 +18,7 @@ import article from "../../assets/article.svg";
 import idea from "../../assets/idea.svg";
 import information from "../../assets/infomation.svg";
 import { useLocation, useNavigate } from "react-router-dom";
+import logo from "../../assets/main-logo.svg";
 
 const { Title } = Typography;
 export default function ResultsPage() {
@@ -382,7 +383,9 @@ export default function ResultsPage() {
         <div className="result-header">
           <div>
             <Space align="baseline" style={{ paddingLeft: "4.5em" }}>
-              <div className="result-header-logo">LOGO</div>
+              <div className="result-header-logo">
+                <img style={{ height: "2.5em" }} src={logo} />
+              </div>
               {<SearchBox width={420} />}
             </Space>
             <Divider className="result-header-divider" />
