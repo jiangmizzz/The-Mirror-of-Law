@@ -21,6 +21,12 @@ dependencies {
     implementation("org.springframework.data:spring-data-elasticsearch")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
+    implementation("com.baomidou:mybatis-plus-boot-starter:3.5.3.1") {
+        exclude(group = "org.mybatis", module = "mybatis-spring")
+    }
+    implementation("org.mybatis:mybatis-spring:3.0.3")
+    runtimeOnly("com.alibaba:druid-spring-boot-starter:1.2.16")
+    runtimeOnly("com.mysql:mysql-connector-j")
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
     testImplementation("org.springframework.boot:spring-boot-starter-test")

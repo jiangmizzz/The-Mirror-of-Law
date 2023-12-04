@@ -1,4 +1,5 @@
 src/main/resources/application.properties
+src/main/resources/application.yml
 logs/
 HELP.md
 .gradle
@@ -20,7 +21,7 @@ bin/
 !**/src/test/**/bin/
 
 ### IntelliJ IDEA ###
-.idea
+.idea/
 *.iws
 *.iml
 *.ipr
