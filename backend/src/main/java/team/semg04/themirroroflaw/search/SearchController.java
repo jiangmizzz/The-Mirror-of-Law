@@ -1,11 +1,6 @@
 package team.semg04.themirroroflaw.search;
 
 import co.elastic.clients.json.JsonData;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
-import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -19,16 +14,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
+import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
+import org.springframework.data.elasticsearch.core.query.FetchSourceFilterBuilder;
 import org.springframework.data.elasticsearch.core.query.HighlightQuery;
 import org.springframework.data.elasticsearch.core.query.Query;
 import org.springframework.data.elasticsearch.core.query.highlight.Highlight;
 import org.springframework.data.elasticsearch.core.query.highlight.HighlightField;
 import org.springframework.data.elasticsearch.core.query.highlight.HighlightParameters;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -59,8 +55,9 @@ public class SearchController {
     @Parameters({
             @Parameter(name = "input", description = "用户在输入框中输入的内容"),
             @Parameter(name = "searchType", description = "搜索类型"),
-            @Parameter(name = "filters", description = "筛选条件", content =
-            @Content(mediaType = MediaType.APPLICATION_JSON_VALUE, schema = @Schema(implementation = Filters.class))),
+            @Parameter(name = "resultType", description = "结果类型"),
+            @Parameter(name = "startTime", description = "起始时间，年份≤-9999表示无限制"),
+            @Parameter(name = "endTime", description = "终止时间，年份≥9999表示无限制"),
             @Parameter(name = "pageSize", description = "每页条数"),
             @Parameter(name = "pageNumber", description = "第x页，从0开始")
     })
@@ -73,47 +70,76 @@ public class SearchController {
     })
     @GetMapping("/list")
     public ResponseEntity<Response<SearchList>> searchLaws(@RequestParam(name = "input") String input,
-                                                           @RequestParam(name = "searchType") SearchType searchType,
-                                                           @RequestParam(name = "filters") String filtersString,
-                                                           @RequestParam(name = "pageSize") Integer pageSize,
-                                                           @RequestParam(name = "pageNumber") Integer pageNumber) {
+                                                           @RequestParam(name = "searchType", required = false,
+                                                                   defaultValue = "ALL") SearchType searchType,
+                                                           @RequestParam(name = "resultType") List<ResultType> resultType,
+                                                           @RequestParam(name = "startTime", required = false,
+                                                                   defaultValue = "-9999-01-01") LocalDate startTime,
+                                                           @RequestParam(name = "endTime", required = false,
+                                                                   defaultValue = "9999-12-31") LocalDate endTime,
+                                                           @RequestParam(name = "pageSize", required = false,
+                                                                   defaultValue = "10") Integer pageSize,
+                                                           @RequestParam(name = "pageNumber", required = false,
+                                                                   defaultValue = "0") Integer pageNumber) {
         try {
+            // Check parameters
+            if (pageSize <= 0 || pageSize > 50) {
+                log.error("Get search result list error: Invalid pageSize. pageSize: " + pageSize);
+                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.toString(),
+                        "Invalid pageSize. PageSize should be in range [1, 50]."), HttpStatus.BAD_REQUEST);
+            }
+            if (pageNumber < 0 || pageNumber + pageSize > 10000) {
+                log.error("Get search result list error: Invalid pageNumber. pageNumber: " + pageNumber);
+                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.toString(),
+                        "Invalid pageNumber. PageNumber should be in range [0, 10000 - pageSize]."),
+                        HttpStatus.BAD_REQUEST);
+            }
+
+            // Initialize result list
             SearchList searchList = new SearchList();
             searchList.setResults(new ArrayList<>());
             searchList.setTotal(0);
-            ObjectMapper objectMapper = new ObjectMapper();
-            Filters filters = objectMapper.readValue(filtersString, Filters.class);
+
             Pageable pageable = Pageable.ofSize(pageSize).withPage(pageNumber);
             HighlightParameters highlightParameters =
-                    HighlightParameters.builder().withBoundaryScannerLocale("zh-cn").withBoundaryChars(".,!?; " +
-                            "\t\n，。！？；").withPreTags("").withPostTags("").build();
-            for (ResultType type : filters.getResultType()) {
+                    HighlightParameters.builder().withBoundaryScannerLocale("zh-cn")
+                            .withBoundaryChars(".,!?; \t\n，。！？；、").withPreTags("").withPostTags("").build();
+            for (ResultType type : resultType) {
                 if (type == ResultType.LAW) {
-                    String fields = switch (searchType) {
-                        case CONTENT -> "content";
-                        case TITLE -> "title";
-                        case SOURCE -> "office";
+                    List<String> fields = switch (searchType) {
+                        case ALL -> List.of("content", "title^3");
+                        case TITLE -> List.of("title");
+                        case SOURCE -> List.of("office");
                     };
                     List<HighlightField> highlightFields = List.of(new HighlightField("content"));
-                    Query searchQuery =
-                            NativeQuery.builder().withQuery(query -> query.match(match -> match.field(fields).query(input)))
-                                    .withFilter(filter -> filter.range(range -> range.field("publish")
-                                            .gte(JsonData.of(filters.getStartTime().toString()))
-                                            .lte(JsonData.of(filters.getEndTime().toString()))))
+                    NativeQueryBuilder nativeQueryBuilder =
+                            NativeQuery.builder().withQuery(query -> query.multiMatch(multiMatch -> multiMatch.query(input).fields(fields)
+                                            .analyzer("ik_smart")))
+                                    .withSourceFilter(new FetchSourceFilterBuilder().withIncludes("id", "title",
+                                            "publish", "office", "like", "dislike").build())
                                     .withHighlightQuery(new HighlightQuery(new Highlight(highlightParameters,
                                             highlightFields), null))    // HighlightQuery的第二个参数我不知道是干啥的，反正放个null也行
-                                    .withPageable(pageable).build();
+                                    .withPageable(pageable);
+                    if (startTime.isAfter(LocalDate.ofYearDay(-9999, 365))) {
+                        nativeQueryBuilder.withFilter(filter -> filter.range(range -> range.field("publish")
+                                .gte(JsonData.of(startTime.toString()))));
+                    }
+                    if (endTime.isBefore(LocalDate.ofYearDay(9999, 1))) {
+                        nativeQueryBuilder.withFilter(filter -> filter.range(range -> range.field("publish")
+                                .lte(JsonData.of(endTime.toString()))));
+                    }
+                    Query searchQuery = nativeQueryBuilder.build();
                     SearchHits<LawsData> lawsData = elasticsearchOperations.search(searchQuery, LawsData.class);
                     searchList.setTotal(searchList.getTotal() + (int) lawsData.getTotalHits());
                     for (SearchHit<LawsData> data : lawsData) {
                         SearchList.ResultItem resultItem = new SearchList.ResultItem();
                         resultItem.setId(data.getContent().getId());
                         resultItem.setTitle(data.getContent().getTitle());
-                        if (fields.equals("content")) {
-                            resultItem.setDescription(String.join("...", data.getHighlightField(fields)).replaceAll(
+                        if (searchType == SearchType.ALL) {
+                            resultItem.setDescription(String.join("...", data.getHighlightField("content")).replaceAll(
                                     "\n", ""));
                         } else {
-                            resultItem.setDescription(data.getContent().getContent().substring(0, 100).replaceAll("\n"
+                            resultItem.setDescription(data.getContent().getContent().substring(0, 200).replaceAll("\n"
                                     , ""));
                         }
                         resultItem.setDate(data.getContent().getPublish());
@@ -180,7 +206,7 @@ public class SearchController {
     }
 
     public enum SearchType {
-        CONTENT, TITLE, SOURCE
+        ALL, TITLE, SOURCE
     }
 
     public enum ResultType {
@@ -196,18 +222,6 @@ public class SearchController {
         private String content;
         private Integer resultType;
         private String link;
-    }
-
-    @Data
-    public static class Filters {
-        private List<ResultType> resultType;
-        // LocalDataTime is not supported by default
-        @JsonSerialize(using = LocalDateSerializer.class)
-        @JsonDeserialize(using = LocalDateDeserializer.class)
-        private LocalDate startTime;
-        @JsonSerialize(using = LocalDateSerializer.class)
-        @JsonDeserialize(using = LocalDateDeserializer.class)
-        private LocalDate endTime;
     }
 
     @Data
