@@ -2,6 +2,7 @@ import type { Response } from "./vite-env";
 
 const prefix = "http://127.0.0.1:8080/api";
 export async function getFetcher(key: string) {
+
   const resp = (await fetch(prefix + key, { mode: "cors" }).then((res) =>
     res.json()
   )) as Response<any>;
@@ -9,7 +10,7 @@ export async function getFetcher(key: string) {
   if (!resp.success) {
     throw new Error(resp.errorCode + ": " + resp.errorMessage);
   }
-  // console.log(resp);
+  console.log(resp);
   return resp.data;
 }
 export async function postFetcher(
@@ -27,6 +28,6 @@ export async function postFetcher(
   if (!resp.success) {
     throw new Error(resp.errorCode + ": " + resp.errorMessage);
   }
-  // console.log(resp);
+  console.log(resp);
   return resp.data;
 }

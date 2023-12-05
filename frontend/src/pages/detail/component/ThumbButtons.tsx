@@ -10,10 +10,12 @@ import {
 } from "@ant-design/icons";
 import "./ThumbButtons.css";
 import FavoriteButton from "./favorite";
+import useSWRMutation from "swr";
+import { postFetcher } from "../../../utils.ts";
 
 // Props 接口
 interface ThumbButtonsProps {
-  id: number; // 从父组件传递的文档id
+  id: string; // 从父组件传递的文档id
   initialLikes: number;
   initialDislikes: number;
 }
@@ -35,11 +37,18 @@ const ThumbButtons: React.FC<ThumbButtonsProps> = ({
     5: <SmileOutlined />,
   };
 
+  const { trigger, isMutating } = useSWRMutation<
+    null, // 返回数据类型
+    Error, // 错误类型
+    string, //key类型
+    //any
+    { id: string; feedback: boolean } // 键的类型
+  >("/search/feedback", postFetcher);
+
   // 处理用户的点击行为
   const handleThumbClick = async (isLike: boolean) => {
     // TODO: 判断用户是否登录
     const isUserLoggedIn = true;
-
     if (!isUserLoggedIn) {
       // 如果未登录，重定向到登录页面
       message.warning("请先登录！");
@@ -53,44 +62,43 @@ const ThumbButtons: React.FC<ThumbButtonsProps> = ({
       id: id, // 从父组件传递的文档id
       feedback: isLike, // true-点赞，false-点踩
     };
-
-    if (userLiked === null) {
-      // 用户还未点赞或者踩
-      if (isLike) {
-        setLikes(likes + 1);
-        setUserLiked(true);
-      } else {
-        setDislikes(dislikes + 1);
-        setUserLiked(false);
-      }
-    } else {
-      // 用户已经点赞/踩
-      if ((isLike && userLiked) || (!isLike && !userLiked)) {
-        // 取消前一个点赞或点踩
-        isLike ? setLikes(likes - 1) : setDislikes(dislikes - 1);
-        setUserLiked(null); // 重新变为未点赞/踩的状态
-      } else {
-        // 切换点赞或点踩
-        if (isLike) {
-          setLikes(likes + 1);
-          setDislikes(dislikes - 1);
-          setUserLiked(true);
-        } else {
-          setLikes(likes - 1);
-          setDislikes(dislikes + 1);
-          setUserLiked(false);
-        }
-      }
-    }
-
+    // 发送 POST 请求
     try {
       // 发送 POST 请求
-      // const response = await axios.post('/api/search/feedback', requestData);
+      await trigger(requestData);
 
+      // const response = await axios.post('/api/search/feedback', requestData);
       // 处理成功响应
       //console.log(response.data); // 根据需要处理后端返回的数据
 
-      // TODO: 到时候要把前面的逻辑块放到这里
+      if (userLiked === null) {
+        // 用户还未点赞或者踩
+        if (isLike) {
+          setLikes(likes + 1);
+          setUserLiked(true);
+        } else {
+          setDislikes(dislikes + 1);
+          setUserLiked(false);
+        }
+      } else {
+        // 用户已经点赞/踩
+        if ((isLike && userLiked) || (!isLike && !userLiked)) {
+          // 取消前一个点赞或点踩
+          isLike ? setLikes(likes - 1) : setDislikes(dislikes - 1);
+          setUserLiked(null); // 重新变为未点赞/踩的状态
+        } else {
+          // 切换点赞或点踩
+          if (isLike) {
+            setLikes(likes + 1);
+            setDislikes(dislikes - 1);
+            setUserLiked(true);
+          } else {
+            setLikes(likes - 1);
+            setDislikes(dislikes + 1);
+            setUserLiked(false);
+          }
+        }
+      }
 
       message.success("操作成功！");
     } catch (error: any) {
