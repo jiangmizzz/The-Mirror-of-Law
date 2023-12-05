@@ -1,6 +1,6 @@
 // DetailPage.tsx
-import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState } from "react";
+import { useParams } from "react-router-dom";
 import {
   Card,
   Typography,
@@ -15,28 +15,28 @@ import {
   Avatar,
   Empty,
   Button,
-} from 'antd';
+} from "antd";
 import {
   ArrowLeftOutlined,
   CustomerServiceOutlined,
   SmileOutlined,
   BulbTwoTone,
-} from '@ant-design/icons';
-import ThumbButtons from './component/ThumbButtons.tsx';
-import RelatedLinks from './component/RelatedLinks.tsx';
-import AI_ICON from '../../assets/icon/AIicon';
-import './detail.css';
-import { useNavigate } from 'react-router-dom';
-import useSWR from 'swr';
-import { getFetcher } from '../../utils.ts';
+} from "@ant-design/icons";
+import ThumbButtons from "./component/ThumbButtons.tsx";
+import RelatedLinks from "./component/RelatedLinks.tsx";
+import AI_ICON from "../../assets/icon/AIicon";
+import "./detail.css";
+import { useNavigate } from "react-router-dom";
+import useSWR from "swr";
+import { getFetcher } from "../../utils.ts";
 
 const { Search } = Input;
-const avatar_src = '../../assets/avatar.svg';
+const avatar_src = "../../assets/avatar.svg";
 
 const DetailPage: React.FC = () => {
   const { id } = useParams(); // 根据url来获取params
   //   const [data, setData] = useState<any>({}); // 初始化为空对象
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
   const [messageApi, contextHolder] = message.useMessage(); // 骨架屏，但是貌似还用不了
   const [ifAi, setAi] = useState<boolean>(false); // 是否启用AI辅助功能（打开抽屉）
   const navigate = useNavigate();
@@ -48,7 +48,7 @@ const DetailPage: React.FC = () => {
   // AI辅助功能的搜索按钮处理事件
   const onSearch = () => {
     // 处理输入框的值
-    console.log('Input Value:', inputValue);
+    console.log("Input Value:", inputValue);
   };
   // 打开抽屉（AI辅助功能）
   const showDrawer = () => {
@@ -88,8 +88,8 @@ const DetailPage: React.FC = () => {
   // 显示正在加载的message
   const showLoading = () => {
     messageApi.open({
-      type: 'loading',
-      content: '数据加载中...',
+      type: "loading",
+      content: "数据加载中...",
       duration: 0,
     });
     // Dismiss manually and asynchronously
@@ -98,8 +98,8 @@ const DetailPage: React.FC = () => {
 
   // 如果有错误，显示错误信息
   if (error) {
-    console.error('Failed to fetch data:', error);
-    message.error('加载失败！');
+    console.error("Failed to fetch data:", error);
+    message.error("加载失败！");
   }
 
   // 在加载状态下显示 loading 界面
@@ -110,9 +110,9 @@ const DetailPage: React.FC = () => {
       <div className="detail-box">
         <Card
           style={{
-            marginTop: '20px',
-            width: '800px',
-            height: '600px',
+            marginTop: "20px",
+            width: "800px",
+            height: "600px",
             // justifyContent: 'center',
             // alignItems: 'center',
             // display: 'flex',
@@ -134,12 +134,12 @@ const DetailPage: React.FC = () => {
       <div className="detail-box">
         <Card
           style={{
-            marginTop: '20px',
-            width: '800px',
-            height: '600px',
-            justifyContent: 'center',
-            alignItems: 'center',
-            display: 'flex',
+            marginTop: "20px",
+            width: "800px",
+            height: "600px",
+            justifyContent: "center",
+            alignItems: "center",
+            display: "flex",
           }}
         >
           <Empty description="暂无数据" />;
@@ -169,27 +169,27 @@ const DetailPage: React.FC = () => {
       {
         <Card
           style={{
-            marginTop: '20px',
-            width: '800px',
-            justifyContent: 'center',
-            alignItems: 'center',
-            display: 'flex',
+            marginTop: "20px",
+            width: "800px",
+            justifyContent: "center",
+            alignItems: "center",
+            display: "flex",
           }}
         >
-          <Typography.Title level={2} style={{ textAlign: 'center' }}>
+          <Typography.Title level={2} style={{ textAlign: "center" }}>
             {title}
           </Typography.Title>
 
           <div
             style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              marginBottom: '16px',
+              display: "flex",
+              justifyContent: "space-between",
+              marginBottom: "16px",
             }}
           >
             <div>
               <Typography.Text>{publishTime}</Typography.Text>
-              <Typography.Text type="secondary" style={{ marginLeft: '8px' }}>
+              <Typography.Text type="secondary" style={{ marginLeft: "8px" }}>
                 来源：{source}
               </Typography.Text>
             </div>
@@ -209,7 +209,7 @@ const DetailPage: React.FC = () => {
 
           <Typography.Title level={5}>您对这篇文档的评价</Typography.Title>
           <ThumbButtons
-            id={id || ''} // 如果 id 是 undefined，则使用空字符串(TODO)
+            id={id || ""} // 如果 id 是 undefined，则使用空字符串(TODO)
             initialLikes={feedbackCnt.likes}
             initialDislikes={feedbackCnt.dislikes}
           />
@@ -262,8 +262,8 @@ const DetailPage: React.FC = () => {
               className="custom-drawer"
               styles={{
                 header: {
-                  background: 'linear-gradient( blue, pink)',
-                  color: 'white',
+                  background: "linear-gradient( blue, pink)",
+                  color: "white",
                 },
               }}
               footer={
@@ -272,12 +272,12 @@ const DetailPage: React.FC = () => {
                     {/* TODO: 可以考虑把avatar换成自己的 avatar= */}
                     <img
                       src={avatar_src}
-                      style={{ width: '2em', height: '2em' }}
+                      style={{ width: "2em", height: "2em" }}
                     />
                   </div>
                   <Search
                     placeholder="input search text"
-                    style={{ width: '90%', paddingLeft: '5px' }}
+                    style={{ width: "90%", paddingLeft: "5px" }}
                     value={inputValue}
                     onChange={handleInputChange}
                     onSearch={onSearch}
