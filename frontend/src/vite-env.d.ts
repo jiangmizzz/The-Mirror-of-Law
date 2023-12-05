@@ -5,3 +5,11 @@ export interface Response<T> {
   errorCode: string; // 错误码 (0 if success)
   errorMessage: string; // 错误信息
 }
+//SearchBox的默认值（可选）
+export interface SearchProps {
+  input: string;
+  searchType: number;
+  resultTypes?: string[];
+  startTime?: string;
+  endTime?: string;
+}
