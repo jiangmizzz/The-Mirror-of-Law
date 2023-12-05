@@ -14,6 +14,7 @@ import {
   Input,
   Avatar,
   Empty,
+  Button,
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -25,18 +26,42 @@ import ThumbButtons from './component/ThumbButtons.tsx';
 import RelatedLinks from './component/RelatedLinks.tsx';
 import AI_ICON from '../../assets/icon/AIicon';
 import './detail.css';
+import { useNavigate } from 'react-router-dom';
 import useSWR from 'swr';
 import { getFetcher } from '../../utils.ts';
 
 const { Search } = Input;
-const avatar_src = '../../assets/28.jpg';
+const avatar_src = '../../assets/avatar.svg';
 
 const DetailPage: React.FC = () => {
   const { id } = useParams(); // 根据url来获取params
   //   const [data, setData] = useState<any>({}); // 初始化为空对象
   const [inputValue, setInputValue] = useState('');
   const [messageApi, contextHolder] = message.useMessage(); // 骨架屏，但是貌似还用不了
-  const [ifAi, setAi] = useState<boolean>(false); // 是否启用AI辅助功能
+  const [ifAi, setAi] = useState<boolean>(false); // 是否启用AI辅助功能（打开抽屉）
+  const navigate = useNavigate();
+
+  // TODO: 加入AI功能后，要修改drawer-search的逻辑
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value);
+  };
+  // AI辅助功能的搜索按钮处理事件
+  const onSearch = () => {
+    // 处理输入框的值
+    console.log('Input Value:', inputValue);
+  };
+  // 打开抽屉（AI辅助功能）
+  const showDrawer = () => {
+    setAi(true);
+  };
+  // 关闭抽屉
+  const onClose = () => {
+    setAi(false);
+  };
+  // 回到上一个页面
+  const goBackToLastPage = () => {
+    navigate(-1); // 返回上一页
+  };
 
   // 向后端发起请求获取详情信息的返回体
   interface DetailData {
@@ -60,21 +85,11 @@ const DetailPage: React.FC = () => {
     }
   );
 
-  // TODO: 加入AI功能后，要修改drawer-search的逻辑
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
-  };
-  // AI辅助功能的搜索按钮处理事件
-  const onSearch = () => {
-    // 处理输入框的值
-    console.log('Input Value:', inputValue);
-  };
-
   // 显示正在加载的message
   const showLoading = () => {
     messageApi.open({
       type: 'loading',
-      content: 'Action in progress..',
+      content: '数据加载中...',
       duration: 0,
     });
     // Dismiss manually and asynchronously
@@ -201,59 +216,86 @@ const DetailPage: React.FC = () => {
 
           <Divider />
           {<RelatedLinks />}
+
+          {/* 悬浮按钮 */}
+          <FloatButton.Group
+            trigger="click"
+            type="primary"
+            style={{ right: 24 }}
+            icon={<CustomerServiceOutlined />}
+            badge={{ dot: true }}
+          >
+            <Tooltip title="快乐特效开启" placement="right" color="#7464FA">
+              <FloatButton badge={{ dot: true }} icon={<SmileOutlined />} />
+            </Tooltip>
+            <Tooltip title="回到上一页" placement="right" color="#7464FA">
+              <FloatButton
+                icon={<ArrowLeftOutlined />}
+                onClick={goBackToLastPage}
+              />
+            </Tooltip>
+            <Tooltip title="AI总结" placement="right" color="#7464FA">
+              <FloatButton
+                badge={{ dot: true }}
+                icon={<AI_ICON />}
+                onClick={showDrawer}
+              />
+            </Tooltip>
+            <Drawer
+              title="AI智能文档总结"
+              placement="right"
+              onClose={onClose}
+              open={ifAi}
+              closable={false} // 不能通过点击其他区域来关闭抽屉
+              maskClosable={false}
+              extra={
+                <Space>
+                  <Button
+                    className="drawer-cancle-button"
+                    type="primary"
+                    onClick={onClose}
+                  >
+                    Cancel
+                  </Button>
+                </Space>
+              }
+              className="custom-drawer"
+              styles={{
+                header: {
+                  background: 'linear-gradient( blue, pink)',
+                  color: 'white',
+                },
+              }}
+              footer={
+                <div className="drawer-search">
+                  <div className="drawer-search-avatar">
+                    {/* TODO: 可以考虑把avatar换成自己的 avatar= */}
+                    <img
+                      src={avatar_src}
+                      style={{ width: '2em', height: '2em' }}
+                    />
+                  </div>
+                  <Search
+                    placeholder="input search text"
+                    style={{ width: '90%', paddingLeft: '5px' }}
+                    value={inputValue}
+                    onChange={handleInputChange}
+                    onSearch={onSearch}
+                    enterButton
+                  />
+                </div>
+              }
+            >
+              <p>Some contents...</p>
+              <p>Some contents...</p>
+              <p>Some contents...</p>
+            </Drawer>
+          </FloatButton.Group>
         </Card>
       }
-      {/* 悬浮按钮 */}
-      <FloatButton.Group
-        trigger="click"
-        type="primary"
-        style={{ right: 24 }}
-        icon={<CustomerServiceOutlined />}
-        badge={{ dot: true }}
-      >
-        <Tooltip title="快乐特效开启" placement="right" color="#7464FA">
-          <FloatButton badge={{ dot: true }} icon={<SmileOutlined />} />
-        </Tooltip>
-        <Tooltip title="回到搜索页面" placement="right" color="#7464FA">
-          <FloatButton icon={<ArrowLeftOutlined />} />
-        </Tooltip>
-        <Tooltip title="AI总结" placement="right" color="#7464FA">
-          <FloatButton
-            badge={{ dot: true }}
-            icon={<AI_ICON />}
-            onClick={() => setAi(true)}
-          />
-        </Tooltip>
-        <Drawer
-          title="AI智能文档总结"
-          placement="right"
-          onClose={() => setAi(false)}
-          open={ifAi}
-          footer={
-            <div className="drawer-search">
-              <div className="drawer-search-avatar">
-                {/* TODO: 可以考虑把avatar换成自己的 avatar= */}
-                <Avatar src={avatar_src} />
-              </div>
-              <Search
-                placeholder="input search text"
-                style={{ width: '90%', paddingLeft: '5px' }}
-                value={inputValue}
-                onChange={handleInputChange}
-                onSearch={onSearch}
-                enterButton
-              />
-            </div>
-          }
-        >
-          <p>Some contents...</p>
-          <p>Some contents...</p>
-          <p>Some contents...</p>
-        </Drawer>
-      </FloatButton.Group>
 
-      {/* 回到顶部按钮 */}
-      <FloatButton.BackTop />
+      {/* 回到顶部按钮
+      <FloatButton.BackTop /> */}
     </div>
   );
 };

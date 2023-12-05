@@ -3,10 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { Card, Space, Button, Divider, Tooltip } from 'antd';
 import { StarTwoTone, InfoCircleOutlined } from '@ant-design/icons';
 import './RelatedLinks.css';
+import { useNavigate } from 'react-router-dom';
 
 interface RelatedProps {}
 
 const RelatedLinks: React.FC<RelatedProps> = () => {
+  const navigate = useNavigate(); //导航到其他页面
   const [relatedList, setRelatedList] = useState<
     { title: string; id: number }[]
   >([]);
@@ -51,7 +53,15 @@ const RelatedLinks: React.FC<RelatedProps> = () => {
       <div className="related-links-list">
         {relatedList.map((item, index) => {
           return (
-            <Button key={item.id} type="link">
+            <Button
+              key={item.id}
+              type="link"
+              onClick={() => {
+                navigate(`/detail/${item.id}`, {
+                  state: { previousLocation: location.pathname },
+                });
+              }}
+            >
               {index + 1 + '. ' + item.title}
             </Button>
           );

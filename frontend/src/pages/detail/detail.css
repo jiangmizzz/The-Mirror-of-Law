@@ -6,3 +6,11 @@
   align-items: flex-end;
   justify-content: space-between;
 }
+
+.custom-drawer .ant-drawer-title {
+  color: white; /* 设置标题字体颜色 */
+}
+
+.drawer-cancle-button {
+  color: white;
+}
