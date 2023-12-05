@@ -26,12 +26,9 @@ import org.springframework.data.elasticsearch.core.query.highlight.HighlightFiel
 import org.springframework.data.elasticsearch.core.query.highlight.HighlightParameters;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import team.semg04.themirroroflaw.Response;
-import team.semg04.themirroroflaw.search.data.LawsData;
+import team.semg04.themirroroflaw.search.entity.Laws;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -39,6 +36,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
+@CrossOrigin(origins = "http://localhost:5173")
 @RequestMapping("/api/search")
 @Tag(name = "Search", description = "搜索结果处理")
 public class SearchController {
@@ -129,9 +127,9 @@ public class SearchController {
                                 .lte(JsonData.of(endTime.toString()))));
                     }
                     Query searchQuery = nativeQueryBuilder.build();
-                    SearchHits<LawsData> lawsData = elasticsearchOperations.search(searchQuery, LawsData.class);
+                    SearchHits<Laws> lawsData = elasticsearchOperations.search(searchQuery, Laws.class);
                     searchList.setTotal(searchList.getTotal() + (int) lawsData.getTotalHits());
-                    for (SearchHit<LawsData> data : lawsData) {
+                    for (SearchHit<Laws> data : lawsData) {
                         SearchList.ResultItem resultItem = new SearchList.ResultItem();
                         resultItem.setId(data.getContent().getId());
                         resultItem.setTitle(data.getContent().getTitle());
@@ -180,21 +178,21 @@ public class SearchController {
     public ResponseEntity<Response<Detail>> searchDetail(@RequestParam(name = "id") String id) {
         try {
             Detail detail = new Detail();
-            LawsData lawsData = elasticsearchOperations.get(id, LawsData.class);
-            if (lawsData == null) {
+            Laws laws = elasticsearchOperations.get(id, Laws.class);
+            if (laws == null) {
                 log.error("Get search result detail error: LawsData not found. Id: " + id);
                 return new ResponseEntity<>(new Response<>(false, null, HttpStatus.NOT_FOUND.toString(),
                         "LawsData not found."), HttpStatus.NOT_FOUND);
             }
-            detail.setTitle(lawsData.getTitle());
-            detail.setSource(lawsData.getOffice());
-            detail.setPublishTime(lawsData.getPublish());
+            detail.setTitle(laws.getTitle());
+            detail.setSource(laws.getOffice());
+            detail.setPublishTime(laws.getPublish());
             detail.setFeedbackCnt(new FeedbackCnt());
-            detail.getFeedbackCnt().setLikes(lawsData.getLike());
-            detail.getFeedbackCnt().setDislikes(lawsData.getDislike());
-            detail.setContent(lawsData.getContent());
+            detail.getFeedbackCnt().setLikes(laws.getLike());
+            detail.getFeedbackCnt().setDislikes(laws.getDislike());
+            detail.setContent(laws.getContent());
             detail.setResultType(ResultType.LAW.ordinal());
-            detail.setLink(lawsData.getUrl());
+            detail.setLink(laws.getUrl());
             log.info("Get search result detail success. Id: " + id);
             return new ResponseEntity<>(new Response<>(true, detail, "0", "Success."),
                     HttpStatus.OK);
