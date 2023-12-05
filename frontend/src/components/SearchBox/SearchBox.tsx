@@ -233,9 +233,9 @@ export default function SearchBox(props: {
             style={{ width: props.width }}
             //之后编辑为历史搜索记录
             options={[
-              { value: "Burns Bay Road" },
-              { value: "Downing Street" },
-              { value: "Wall Street" },
+              { value: "刑法" },
+              { value: "国务院" },
+              { value: "未成年人保护法" },
             ]}
             size="large"
             open={ifPop}

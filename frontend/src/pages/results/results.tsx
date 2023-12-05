@@ -9,7 +9,7 @@ import {
 } from "antd";
 import { LikeOutlined, DislikeOutlined, MoreOutlined } from "@ant-design/icons";
 import "./results.css";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import SearchBox from "../../components/SearchBox/SearchBox";
 import { RadialTreeGraph } from "@ant-design/graphs";
 import rule from "../../assets/rule.svg";
@@ -138,6 +138,7 @@ export default function ResultsPage() {
   const [paramsStr, setParamsStr] = useState<string | null>(null);
   //路由参数的解析和处理，并基于此进行请求
   //这部分只会在每次路由值更新和分页选择时运行
+  const prevCurrentPage = useRef(currentPage);
   useEffect(() => {
     //location.search返回值每次更新，你把大家都害死啦！！！
     const params = new URLSearchParams(location.search);
@@ -165,21 +166,6 @@ export default function ResultsPage() {
       ...extraParams,
     });
 
-    //用于请求的对象
-    // interface RequestParamsProps {
-    //   input: string;
-    //   //搜索类型，0-全文搜索,1-标题搜索,2-作者/出处搜索,3-主题搜索
-    //   searchType: string;
-    //   //搜索结果类型，0-法律法规，1-裁判文书，2-期刊论文
-    //   //3-法律观点，4-资讯
-    //   resultType: string;
-    //   //对发布日期的筛选，均以"YYYY-MM-DD"形式
-    //   startTime: string; //起始时间
-    //   endTime: string; //终止时间
-    //   pageSize: string; //每页条数
-    //   pageNumber: string; //第x页，从0开始
-    // }
-
     const requestParams: Record<string, string> = {
       input: params.get("input")!,
       searchType: params.get("searchType")!,
@@ -190,32 +176,13 @@ export default function ResultsPage() {
       pageSize: String(pageSize),
       pageNumber: String(currentPage),
     };
-    console.log(new URLSearchParams(requestParams).toString());
+    //TODO:如果只是改变路由参数，则当前页面置0，暂时考虑不完善一点
+    if (prevCurrentPage.current == currentPage) {
+      setCurrentPage(0);
+    }
+    // console.log(new URLSearchParams(requestParams).toString());
     setParamsStr(new URLSearchParams(requestParams).toString());
-
     //注意：搜索结果的请求参数均不在这一页直接维护，而是通过路由值获取
-    // export interface SearchProps {
-    //   input: string;
-    //   searchType: number;
-    //   resultTypes?: string[];
-    //   startTime?: string;
-    //   endTime?: string;
-    // }
-
-    // √input: string; //用户在输入框中输入的内容√
-    // //搜索类型，0-全文搜索,1-标题搜索,2-作者/出处搜索,3-主题搜索
-    // √searchType: number;
-    // //筛选条件
-    // //搜索结果类型，0-法律法规，1-裁判文书，2-期刊论文
-    // //3-法律观点，4-资讯
-    // ×resultType: number[];
-    // //对发布日期的筛选，均以"YYYY-MM-DD"形式
-    // √startTime: string; //起始时间
-    // √endTime: string; //终止时间
-    // //后期涉及数据更新的话可以再规定一下更新时间
-    // //updateTime: string;
-    // pageSize: number; //每页条数
-    // pageNumber: number; //第x页，从0开始
   }, [location.search, currentPage]);
 
   //请求函数，注意要写在最外层
