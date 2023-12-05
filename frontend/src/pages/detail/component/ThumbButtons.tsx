@@ -65,7 +65,7 @@ const ThumbButtons: React.FC<ThumbButtonsProps> = ({
     // 发送 POST 请求
     try {
       // 发送 POST 请求
-      await trigger(requestData);
+      // await trigger(requestData);
 
       // const response = await axios.post('/api/search/feedback', requestData);
       // 处理成功响应
@@ -76,9 +76,11 @@ const ThumbButtons: React.FC<ThumbButtonsProps> = ({
         if (isLike) {
           setLikes(likes + 1);
           setUserLiked(true);
+          message.success("点赞成功！");
         } else {
           setDislikes(dislikes + 1);
           setUserLiked(false);
+          message.success("点踩成功！");
         }
       } else {
         // 用户已经点赞/踩
@@ -86,21 +88,22 @@ const ThumbButtons: React.FC<ThumbButtonsProps> = ({
           // 取消前一个点赞或点踩
           isLike ? setLikes(likes - 1) : setDislikes(dislikes - 1);
           setUserLiked(null); // 重新变为未点赞/踩的状态
+          message.success("取消成功！");
         } else {
           // 切换点赞或点踩
           if (isLike) {
             setLikes(likes + 1);
             setDislikes(dislikes - 1);
             setUserLiked(true);
+            message.success("点赞成功！");
           } else {
             setLikes(likes - 1);
             setDislikes(dislikes + 1);
             setUserLiked(false);
+            message.success("点踩成功！");
           }
         }
       }
-
-      message.success("操作成功！");
     } catch (error: any) {
       // 处理请求错误
       console.error("Error sending feedback:", error);
