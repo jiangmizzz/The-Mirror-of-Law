@@ -134,7 +134,7 @@ class LawCrawler():
                 # 有的文档没有WORD，懒得处理了直接continue
                 if docUrl is None:
                     self.fail = self.fail + 1
-                    print(str(self.fail) + ": fail to fetch " + jsonData['result']['title'])
+                    print(str(self.fail) + ": fail to fetch " + jsonData['result']['title'] + "——no doc/docx")
                     continue
 
                 self.success = self.success + 1
@@ -149,6 +149,14 @@ class LawCrawler():
                                         publish=publish, expiry=expiry, url=docUrl, type=type)
                 res = self.session.get(docUrl, headers=self.headers)
                 path = f'./data/{type}/' + title + '_' + publish.split(' ')[0] + '.' + docUrl.split('.')[-1]
+                
+                if len(path) > 200:
+                    self.success = self.success - 1
+                    self.fail = self.fail + 1
+                    print(str(self.fail) + ": fail to fetch " + jsonData['result']['title'] + "——stupid title")
+                    continue
+
+                path = re.sub(r'[<>\n]','',path)
                 with open(path, mode='wb') as f:
                     f.write(res.content)
 
@@ -156,8 +164,9 @@ class LawCrawler():
                 if document.parseDoc(path):
                     document.index()
                 else:
+                    self.success = self.success - 1
                     self.fail = self.fail + 1
-                    print(str(self.fail) + ": fail to fetch " + jsonData['result']['title'])
+                    print(str(self.fail) + ": fail to fetch " + jsonData['result']['title'] + "——error in file format")
 
     def crawlXF(self): 
         # 宪法总共就7个docx
@@ -208,29 +217,29 @@ class LawDocument():
         self.dislike = 0
 
     def parseDoc(self, docPath : str):
-        try:
-            document = docx.Document(docPath)  # 建立Word文件对象
-        except:
-            if docPath.endswith('doc'):
-                try:
-                    word = wc.Dispatch("Word.Application")
-                    doc = word.Documents.Open(os.path.abspath(docPath))
-                    # 12代表转换后为docx文件
-                    doc.SaveAs(os.path.abspath(docPath + "x"), 12)
-                    doc.Close()
-                    word.Quit()
-                    document = docx.Document(docPath + "x")
-                except:
-                    return False
-            else:
-                return False
-        
         content = []
-        for paragraph in document.paragraphs:
-            content.append(paragraph.text)  # 将每一段Paragraph组成列表
+        if docPath.endswith('docx'):
+            try:
+                document = docx.Document(docPath)  # 建立Word文件对象
+                for paragraph in document.paragraphs:
+                    content.append(paragraph.text)  # 将每一段Paragraph组成列表
+            except:
+                return False
+        elif docPath.endswith('doc'):
+            try:
+                doc = word.Documents.Open(os.path.abspath(docPath))
+                # 12代表转换后为docx文件
+                # doc.SaveAs(os.path.abspath(docPath + "x"), 12)
+                for paragraph in doc.paragraphs:
+                    content.append(paragraph.Range.Text)  # 将每一段Paragraph组成列表
+                doc.Close()
+                # document = docx.Document(docPath + "x")
+            except:
+                return False
+            
         delLine = 0
         for i in range(min(10, len(content))):
-            if content[i].strip() != '' and content[i].strip()[0] == '(':
+            if content[i].strip() != '' and content[i].strip()[0] in ['(','（']:
                 break
             else:
                 delLine = delLine + 1
@@ -239,7 +248,6 @@ class LawDocument():
         else:
             del content[:4]
         self.content = '\n'.join(content)  # 将列表转成字符串并隔行输出
-        # print(self.content)
         return True
     
     def index(self):
@@ -253,17 +261,20 @@ class LawDocument():
             document.pop('expiry')
 
         try:
-            es.index(index='laws', document=document, id=self.url.split('/')[-1].split('.')[0])
+            es.index(index=index, document=document, id=self.url.split('/')[-1].split('.')[0])
         except:
             return
         
 if __name__ == "__main__":
     es = Elasticsearch("https://ES服务器ip:9200",http_auth=('ES用户名', 'ES密码'), timeout=20, verify_certs=False)
     index = 'laws'
-    # res = es.indices.create(index='laws', ignore=400)
     crawler = LawCrawler()
     crawler.createDir()
+    word = wc.DispatchEx("Word.Application")
+    word.Visible = 0 # 后台运行,不显示
+    word.DisplayAlerts = 0 # 不警告
     # 参数1可选：宪法，法律法规，行政法规，监察法规，司法解释，地方性法规
     # 参数2为爬取的起始页码，从0开始
     # 参数3为爬取页数，每页10个docx
     crawler.crawl("法律法规", 0, 100)
+    word.Quit()

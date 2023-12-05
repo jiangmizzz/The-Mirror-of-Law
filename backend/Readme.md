@@ -6,15 +6,27 @@
 
 ### 编写配置文件
 
-在目录`src/main/resources`下新建`application.properties`文件，内容参考`application_template.properties`，仅需修改`EDIT ME`中的信息即可。
+在目录`src/main/resources`下新建`application.properties`文件，内容参考`application_template.properties`，仅需修改`EDIT ME`
+中带尖括号的信息即可。
 
 其中，`spring.elasticsearch.uris`为Elasticsearch服务器地址，`spring.elasticsearch.username`和`spring.elasticsearch.password`为Elasticsearch服务器的用户名和密码。
+
+`spring.datasource.url`为MySQL数据库地址，`spring.datasource.username`和`spring.datasource.password`为MySQL数据库的用户名和密码。
 ```properties
 #-----EDIT ME-----#
-spring.elasticsearch.uris=127.0.0.1
+spring.elasticsearch.uris=<127.0.0.1>
 spring.elasticsearch.username=<username>
 spring.elasticsearch.password=<password>
+spring.datasource.url=jdbc:mysql://<127.0.0.1>:3306/mirror_of_law?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false
+spring.datasource.username=<username>
+spring.datasource.password=<password>
 #------------------#
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.datasource.type=com.alibaba.druid.pool.DruidDataSource
+mybatis-plus.configuration.map-underscore-to-camel-case=true
+mybatis-plus.configuration.log-impl=org.apache.ibatis.logging.stdout.StdOutImpl
+mybatis-plus.configuration.aggressive-lazy-loading=true
+mybatis-plus.global-config.db-config.id-type=AUTO
 
 logging.level.root=INFO
 logging.file.name=logs/TheMirrorOfLaw.log

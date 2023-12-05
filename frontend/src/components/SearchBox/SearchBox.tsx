@@ -8,6 +8,7 @@ import {
   Checkbox,
   Tooltip,
   Drawer,
+  message,
 } from "antd";
 import { BulbOutlined } from "@ant-design/icons";
 // import type { MenuProps } from "antd";
@@ -18,11 +19,14 @@ import type { CheckboxChangeEvent } from "antd/es/checkbox";
 import type { CheckboxValueType } from "antd/es/checkbox/Group";
 import aiIcon from "../../assets/AI.svg";
 import { useNavigate } from "react-router-dom";
+import type { SearchProps } from "../../vite-env";
 
 const { RangePicker } = DatePicker;
 //子组件，搜索组件
-//TODO:设置默认值
-export default function SearchBox(props: { width: number }) {
+export default function SearchBox(props: {
+  width: number;
+  searchParams?: SearchProps;
+}) {
   const resultTypeOptions = [
     "法律法规",
     "裁判文书",
@@ -30,6 +34,7 @@ export default function SearchBox(props: { width: number }) {
     "法律观点",
     "资讯",
   ];
+  const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate(); //导航到其他页面
   const defaultResultTypes = ["法律法规", "裁判文书"];
   const [searchType, setSearchType] = useState<number>(0); //搜索类型
@@ -41,6 +46,28 @@ export default function SearchBox(props: { width: number }) {
   const [timeRange, setTimeRange] = useState<string[]>(["", ""]);
   const [updateTime, setUpdateTime] = useState<number>(0); //更新时间
   const [ifAi, setAi] = useState<boolean>(false);
+
+  //在result页打开时需要初始化搜索选项
+  useEffect(() => {
+    //没有接收到的参数默认值为undefined
+    if (props.searchParams) {
+      // console.log(props.searchParams);
+      //批量更新
+      setInput(props.searchParams.input);
+      setSearchType(props.searchParams.searchType);
+      if (props.searchParams.resultTypes) {
+        setResultTypes(props.searchParams.resultTypes);
+        setSenior(true);
+      }
+      if (props.searchParams.startTime && props.searchParams.endTime) {
+        setTimeRange([
+          props.searchParams.startTime,
+          props.searchParams.endTime,
+        ]);
+        setSenior(true);
+      }
+    }
+  }, [props.searchParams]);
 
   //二级子组件，搜索框前缀，指定搜索类型
   function SearchType() {
@@ -139,21 +166,45 @@ export default function SearchBox(props: { width: number }) {
       </>
     );
   }
-  //TODO:处理搜索参数，并跳转到搜索结果页
+
+  //处理搜索参数，并放进url里跳转到搜索结果页
   function handleSearch() {
-    console.log(
-      "search!",
-      input,
-      new URLSearchParams({
-        input: input,
-        startTime: timeRange[0],
-        endTime: timeRange[1],
-      }).toString()
-    );
-    navigate(`/results`);
+    if (input == "") {
+      messageApi.open({
+        type: "error",
+        content: "搜索输入不能为空！",
+      });
+      return;
+    }
+    const paramsObj: Record<string, string> = {
+      input: input,
+      searchType: String(searchType),
+    };
+    if (ifSenior) {
+      //启用高级搜索
+      if (resultTypes.length == 0) {
+        //提示未选择任一搜索结果
+        messageApi.open({
+          type: "error",
+          content: "请至少选择一项需要的搜索结果类型！",
+        });
+        return;
+      } else {
+        paramsObj["resultTypes"] = String(resultTypes);
+        if (timeRange[0] != "" && timeRange[1] != "") {
+          //选择了时间范围
+          paramsObj["startTime"] = timeRange[0];
+          paramsObj["endTime"] = timeRange[1];
+        }
+      }
+    }
+    const params = new URLSearchParams(paramsObj);
+    // console.log("search!", params.toString());
+    navigate(`/results?${params}`);
   }
   return (
     <>
+      {contextHolder}
       <Space style={{ height: "50px" }}>
         {/* 加投影一直有缝隙，放弃了 */}
         {/* 用一种抽象的方法判断AI图标在不同页面的放置位置 */}
@@ -197,8 +248,14 @@ export default function SearchBox(props: { width: number }) {
           >
             {/* 此处添加config疑似会导致input显示异常，故注释 */}
             <Input.Search
+              id="inputBox"
               size="large"
-              placeholder="在 Mirror of Law 中搜索"
+              // 因为输入框不能赋初值的bug，为防止显示值与实际值的不一致，使用placehold提示
+              placeholder={
+                props.searchParams
+                  ? props.searchParams.input
+                  : "在 Mirror of Law 中搜索"
+              }
               // 发现input组件value及defaultValue值无效，疑似为bug
               value={input}
               onChange={(e) => setInput(e.target.value)}

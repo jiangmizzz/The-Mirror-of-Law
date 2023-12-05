@@ -9,7 +9,7 @@ import {
 } from "antd";
 import { LikeOutlined, DislikeOutlined, MoreOutlined } from "@ant-design/icons";
 import "./results.css";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import SearchBox from "../../components/SearchBox/SearchBox";
 import { RadialTreeGraph } from "@ant-design/graphs";
 import rule from "../../assets/rule.svg";
@@ -19,12 +19,22 @@ import idea from "../../assets/idea.svg";
 import information from "../../assets/infomation.svg";
 import { useLocation, useNavigate } from "react-router-dom";
 import logo from "../../assets/main-logo.svg";
+import type { SearchProps } from "../../vite-env";
+import { getFetcher } from "../../utils";
+import useSWR from "swr";
 
 const { Title } = Typography;
 export default function ResultsPage() {
   const location = useLocation(); //在react router v6 中模拟页面栈
   const navigate = useNavigate();
-  // const history = useHistory();  //导航到其他页面
+  const resultTypeMap = new Map([
+    ["法律法规", "0"],
+    ["裁判文书", "1"],
+    ["期刊论文", "2"],
+    ["法律观点", "3"],
+    ["资讯", "4"],
+  ]);
+  const pageSize = 10; //默认页面记录条数
   const resultList: ResultItemProps[] = [
     {
       id: 1,
@@ -97,7 +107,6 @@ export default function ResultsPage() {
     value: string; //节点值（显示出来的）
     children?: NodeInfo[]; //连接的下一层子节点
   }
-
   const centerNode: { center: NodeInfo; desc: string } = {
     center: {
       id: "1",
@@ -115,8 +124,110 @@ export default function ResultsPage() {
     },
     desc: "Oracle Java 是广受欢迎的编程语言和开发平台。它有助于企业降低成本、缩短开发周期、推动创新以及改善应用服务。如今，Java 仍是企业和开发人员的首选开发平台...",
   };
-  //TODO:进入该页面时需要获取搜索结果
-  useEffect(() => {}, []);
+  //搜索结果列表展示
+  const [results, setResults] = useState<{
+    results: ResultItemProps[];
+    total: number;
+  }>({ results: resultList, total: resultList.length });
+  const [searchProps, setSearchProps] = useState<SearchProps>({
+    input: "",
+    searchType: 0,
+  });
+  //初始页码
+  const [currentPage, setCurrentPage] = useState<number>(0);
+  const [paramsStr, setParamsStr] = useState<string | null>(null);
+  //路由参数的解析和处理，并基于此进行请求
+  //这部分只会在每次路由值更新和分页选择时运行
+  useEffect(() => {
+    //location.search返回值每次更新，你把大家都害死啦！！！
+    const params = new URLSearchParams(location.search);
+    // console.log(params.toString());
+    const extraParams: Record<string, string | string[]> = {};
+    const types: string[] = [];
+    if (params.get("resultTypes")) {
+      extraParams["resultTypes"] = params.get("resultTypes")!.split(",");
+      extraParams["resultTypes"].forEach((item) => {
+        if (resultTypeMap.has(item)) {
+          types.push(resultTypeMap.get(item)!);
+        }
+      });
+    }
+    //为防止恶意篡改路由（两个时间值删去一个）导致解析错误，还是需要分开判断
+    if (params.get("startTime")) {
+      extraParams["startTime"] = params.get("startTime")!;
+    }
+    if (params.get("endTime")) {
+      extraParams["endTime"] = params.get("endTime")!;
+    }
+    setSearchProps({
+      input: params.get("input")!,
+      searchType: Number(params.get("searchType"))!,
+      ...extraParams,
+    });
+
+    //用于请求的对象
+    // interface RequestParamsProps {
+    //   input: string;
+    //   //搜索类型，0-全文搜索,1-标题搜索,2-作者/出处搜索,3-主题搜索
+    //   searchType: string;
+    //   //搜索结果类型，0-法律法规，1-裁判文书，2-期刊论文
+    //   //3-法律观点，4-资讯
+    //   resultType: string;
+    //   //对发布日期的筛选，均以"YYYY-MM-DD"形式
+    //   startTime: string; //起始时间
+    //   endTime: string; //终止时间
+    //   pageSize: string; //每页条数
+    //   pageNumber: string; //第x页，从0开始
+    // }
+
+    const requestParams: Record<string, string> = {
+      input: params.get("input")!,
+      searchType: params.get("searchType")!,
+      //TODO:等后端完全实现之后这里要改成全部包括
+      resultType: String(params.get("resultTypes") ? types : ["0"]),
+      startTime: params.get("startTime") ?? "-9999-01-01",
+      endTime: params.get("endTime") ?? "9999-01-01",
+      pageSize: String(pageSize),
+      pageNumber: String(currentPage),
+    };
+    console.log(new URLSearchParams(requestParams).toString());
+    setParamsStr(new URLSearchParams(requestParams).toString());
+
+    //注意：搜索结果的请求参数均不在这一页直接维护，而是通过路由值获取
+    // export interface SearchProps {
+    //   input: string;
+    //   searchType: number;
+    //   resultTypes?: string[];
+    //   startTime?: string;
+    //   endTime?: string;
+    // }
+
+    // √input: string; //用户在输入框中输入的内容√
+    // //搜索类型，0-全文搜索,1-标题搜索,2-作者/出处搜索,3-主题搜索
+    // √searchType: number;
+    // //筛选条件
+    // //搜索结果类型，0-法律法规，1-裁判文书，2-期刊论文
+    // //3-法律观点，4-资讯
+    // ×resultType: number[];
+    // //对发布日期的筛选，均以"YYYY-MM-DD"形式
+    // √startTime: string; //起始时间
+    // √endTime: string; //终止时间
+    // //后期涉及数据更新的话可以再规定一下更新时间
+    // //updateTime: string;
+    // pageSize: number; //每页条数
+    // pageNumber: number; //第x页，从0开始
+  }, [location.search, currentPage]);
+
+  //请求函数，注意要写在最外层
+  const {
+    data: resultsData,
+    error: resultsError,
+    isLoading: resultLoading,
+  } = useSWR<{ results: ResultItemProps[]; total: number }, Error>(() => {
+    //null, undefined, false, '' 均不会发起请求
+    if (paramsStr == null) return false;
+    return "/search/list?" + paramsStr;
+  }, getFetcher);
 
   interface ResultItemProps {
     id: number; //唯一标识符
@@ -379,68 +490,76 @@ export default function ResultsPage() {
   }
   return (
     <>
-      <div className="result-main">
-        <div className="result-header">
-          <div>
-            <Space align="baseline" style={{ paddingLeft: "4.5em" }}>
-              <div className="result-header-logo">
-                <img style={{ height: "2.5em" }} src={logo} />
-              </div>
-              {<SearchBox width={420} />}
-            </Space>
-            <Divider className="result-header-divider" />
-          </div>
-        </div>
-        <div className="result-body">
-          <div style={{ color: "#70757a" }}>
-            {"律镜为您找到相关结果约 " + 525 + " 个"}
-          </div>
-          <div className="result-body-content">
-            <div className="result-body-left">
-              {resultList.map((item) => {
-                return (
-                  <ResultItem
-                    key={item.id}
-                    id={item.id}
-                    title={item.title}
-                    description={item.description}
-                    resultType={item.resultType}
-                    date={item.date}
-                    feedbackCnt={item.feedbackCnt}
-                    source={item.source}
-                  />
-                );
-              })}
-              <div className="result-left-footer">
-                <Pagination
-                  defaultCurrent={1}
-                  total={
-                    525
-                  } /*onChange={handlePageChange} onShowSizeChange={handlePageSizeChange}*/
-                />
-              </div>
+      {resultsError && <div>Error:{resultsError.message}</div>}
+      {resultLoading && <div>loading...</div>}
+      {!resultLoading && !resultsError && (
+        <div className="result-main">
+          <div className="result-header">
+            <div>
+              <Space align="baseline" style={{ paddingLeft: "4.5em" }}>
+                <div className="result-header-logo">
+                  <img style={{ height: "2.5em" }} src={logo} />
+                </div>
+                {<SearchBox width={420} searchParams={searchProps} />}
+              </Space>
+              <Divider className="result-header-divider" />
             </div>
-            <div className="result-body-right">
-              <Card /*loading={true}*/>
-                <Space className="result-body-right-head">
-                  <Title level={3}>{centerNode.center.value}</Title>
-                  <Tooltip
-                    title="知识图谱：自动寻找与搜索内容最贴近的词条节点"
-                    overlayStyle={{ fontSize: "12px" }}
-                  >
-                    <MoreOutlined
-                      style={{ fontSize: "1.4em", color: "rgba(0, 0, 0, 0.7)" }}
+          </div>
+          <div className="result-body">
+            <div style={{ color: "#70757a" }}>
+              {"律镜为您找到相关结果约 " + resultsData?.total + " 个"}
+            </div>
+            <div className="result-body-content">
+              <div className="result-body-left">
+                {resultsData?.results.map((item) => {
+                  return (
+                    <ResultItem
+                      key={item.id}
+                      id={item.id}
+                      title={item.title}
+                      description={item.description}
+                      resultType={item.resultType}
+                      date={item.date}
+                      feedbackCnt={item.feedbackCnt}
+                      source={item.source}
                     />
-                  </Tooltip>
-                </Space>
-                <Divider style={{ margin: "1em 0" }}></Divider>
-                <div>{centerNode.desc}</div>
-                {<KnowledgeMap />}
-              </Card>
+                  );
+                })}
+                <div className="result-left-footer">
+                  <Pagination
+                    current={currentPage + 1}
+                    showSizeChanger={false}
+                    showQuickJumper
+                    total={resultsData?.total}
+                    onChange={(...props) => setCurrentPage(props[0] - 1)}
+                  />
+                </div>
+              </div>
+              <div className="result-body-right">
+                <Card /*loading={true}*/>
+                  <Space className="result-body-right-head">
+                    <Title level={3}>{centerNode.center.value}</Title>
+                    <Tooltip
+                      title="知识图谱：自动寻找与搜索内容最贴近的词条节点"
+                      overlayStyle={{ fontSize: "12px" }}
+                    >
+                      <MoreOutlined
+                        style={{
+                          fontSize: "1.4em",
+                          color: "rgba(0, 0, 0, 0.7)",
+                        }}
+                      />
+                    </Tooltip>
+                  </Space>
+                  <Divider style={{ margin: "1em 0" }}></Divider>
+                  <div>{centerNode.desc}</div>
+                  {<KnowledgeMap />}
+                </Card>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </>
   );
 }
