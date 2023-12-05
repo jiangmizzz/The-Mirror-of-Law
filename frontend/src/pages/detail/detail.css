@@ -18,3 +18,16 @@
 .content {
   white-space: pre-line;
 }
+
+.drawer-search-avatar {
+  background-image: url("../../assets/avatar.png");
+  background-size: contain; /* 保持长宽比，尽量完全显示背景图 */
+  background-position: center; /* 居中显示背景图 */
+  background-repeat: no-repeat; /* 禁止背景图重复 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-bottom: 11px;
+  width: 8%;
+  height: 20px;
+}
