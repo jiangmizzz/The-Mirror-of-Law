@@ -1,4 +1,4 @@
-package team.semg04.themirroroflaw.search.data;
+package team.semg04.themirroroflaw.search.entity;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;
@@ -11,7 +11,7 @@ import java.time.LocalDate;
 
 @Data
 @Document(indexName = "laws")
-public class LawsData {
+public class Laws {
     @Id
     private String id;
 
