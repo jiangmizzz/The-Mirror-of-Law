@@ -14,3 +14,7 @@
 .drawer-cancle-button {
   color: white;
 }
+
+.content {
+  white-space: pre-line;
+}
