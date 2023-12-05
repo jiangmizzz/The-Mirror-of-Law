@@ -69,8 +69,8 @@ public class SearchController {
     @GetMapping("/list")
     public ResponseEntity<Response<SearchList>> searchLaws(@RequestParam(name = "input") String input,
                                                            @RequestParam(name = "searchType", required = false,
-                                                                   defaultValue = "ALL") SearchType searchType,
-                                                           @RequestParam(name = "resultType") List<ResultType> resultType,
+                                                                   defaultValue = "ALL") Integer searchTypeInt,
+                                                           @RequestParam(name = "resultType") List<Integer> resultTypeInt,
                                                            @RequestParam(name = "startTime", required = false,
                                                                    defaultValue = "-9999-01-01") LocalDate startTime,
                                                            @RequestParam(name = "endTime", required = false,
@@ -92,6 +92,7 @@ public class SearchController {
                         "Invalid pageNumber. PageNumber should be in range [0, 10000 - pageSize]."),
                         HttpStatus.BAD_REQUEST);
             }
+            SearchType searchType = SearchType.values()[searchTypeInt];
 
             // Initialize result list
             SearchList searchList = new SearchList();
@@ -102,7 +103,8 @@ public class SearchController {
             HighlightParameters highlightParameters =
                     HighlightParameters.builder().withBoundaryScannerLocale("zh-cn")
                             .withBoundaryChars(".,!?; \t\n，。！？；、").withPreTags("").withPostTags("").build();
-            for (ResultType type : resultType) {
+            for (Integer typeInt : resultTypeInt) {
+                ResultType type = ResultType.values()[typeInt];
                 if (type == ResultType.LAW) {
                     List<String> fields = switch (searchType) {
                         case ALL -> List.of("content", "title^3");
@@ -114,18 +116,13 @@ public class SearchController {
                             NativeQuery.builder().withQuery(query -> query.multiMatch(multiMatch -> multiMatch.query(input).fields(fields)
                                             .analyzer("ik_smart")))
                                     .withSourceFilter(new FetchSourceFilterBuilder().withIncludes("id", "title",
-                                            "publish", "office", "like", "dislike").build())
+                                            "content", "publish", "office", "like", "dislike").build())
+                                    .withFilter(filter -> filter.range(range -> range.field("publish")
+                                            .gte(JsonData.of(startTime.toString()))
+                                            .lte(JsonData.of(endTime.toString()))))
                                     .withHighlightQuery(new HighlightQuery(new Highlight(highlightParameters,
                                             highlightFields), null))    // HighlightQuery的第二个参数我不知道是干啥的，反正放个null也行
                                     .withPageable(pageable);
-                    if (startTime.isAfter(LocalDate.ofYearDay(-9999, 365))) {
-                        nativeQueryBuilder.withFilter(filter -> filter.range(range -> range.field("publish")
-                                .gte(JsonData.of(startTime.toString()))));
-                    }
-                    if (endTime.isBefore(LocalDate.ofYearDay(9999, 1))) {
-                        nativeQueryBuilder.withFilter(filter -> filter.range(range -> range.field("publish")
-                                .lte(JsonData.of(endTime.toString()))));
-                    }
                     Query searchQuery = nativeQueryBuilder.build();
                     SearchHits<Laws> lawsData = elasticsearchOperations.search(searchQuery, Laws.class);
                     searchList.setTotal(searchList.getTotal() + (int) lawsData.getTotalHits());
@@ -133,12 +130,16 @@ public class SearchController {
                         SearchList.ResultItem resultItem = new SearchList.ResultItem();
                         resultItem.setId(data.getContent().getId());
                         resultItem.setTitle(data.getContent().getTitle());
-                        if (searchType == SearchType.ALL) {
+                        if (searchType == SearchType.ALL && !data.getHighlightField("content").isEmpty()) {
                             resultItem.setDescription(String.join("...", data.getHighlightField("content")).replaceAll(
                                     "\n", ""));
                         } else {
-                            resultItem.setDescription(data.getContent().getContent().substring(0, 200).replaceAll("\n"
-                                    , ""));
+                            if (data.getContent().getContent().length() > 200) {
+                                resultItem.setDescription(data.getContent().getContent().substring(0, 200).replaceAll("\n"
+                                        , ""));
+                            } else {
+                                resultItem.setDescription(data.getContent().getContent().replaceAll("\n", ""));
+                            }
                         }
                         resultItem.setDate(data.getContent().getPublish());
                         resultItem.setSource(data.getContent().getOffice());
