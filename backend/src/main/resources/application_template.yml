@@ -16,6 +16,8 @@ spring:
 logging:
     level:
         root: INFO
+        com.baomidou.mybatisplus: DEBUG
+        team.semg04.themirroroflaw.user.mapper: DEBUG
     file:
         name: logs/TheMirrorOfLaw.log
 
@@ -30,7 +32,7 @@ springdoc:
 mybatis-plus:
     configuration:
         map-underscore-to-camel-case: true
-        log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+        log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
         aggressive-lazy-loading: true
     global-config:
         db-config:
