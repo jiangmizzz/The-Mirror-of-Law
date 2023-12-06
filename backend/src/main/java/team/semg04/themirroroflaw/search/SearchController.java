@@ -1,6 +1,5 @@
 package team.semg04.themirroroflaw.search;
 
-import co.elastic.clients.json.JsonData;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.Parameters;
@@ -13,17 +12,11 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.elasticsearch.client.elc.NativeQuery;
-import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
-import org.springframework.data.elasticsearch.core.query.FetchSourceFilterBuilder;
-import org.springframework.data.elasticsearch.core.query.HighlightQuery;
-import org.springframework.data.elasticsearch.core.query.Query;
-import org.springframework.data.elasticsearch.core.query.highlight.Highlight;
-import org.springframework.data.elasticsearch.core.query.highlight.HighlightField;
-import org.springframework.data.elasticsearch.core.query.highlight.HighlightParameters;
+import org.springframework.data.elasticsearch.core.query.SearchTemplateQuery;
+import org.springframework.data.elasticsearch.core.script.Script;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,6 +26,9 @@ import team.semg04.themirroroflaw.search.entity.Laws;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+
+import static java.lang.System.exit;
 
 @Slf4j
 @RestController
@@ -46,6 +42,104 @@ public class SearchController {
     @Autowired
     public void setElasticsearchOperations(ElasticsearchOperations elasticsearchOperations) {
         this.elasticsearchOperations = elasticsearchOperations;
+        init();
+    }
+
+    public void init() {
+        Script allScript = Script.builder().withId("search_by_all").withLanguage("mustache")
+                .withSource("""
+                        {
+                          "_source": {
+                            "includes": ["id","title","publish","office","like","dislike"]
+                          },
+                          "highlight": {
+                            "boundary_chars": "{{{boundary_chars}}}",
+                            "boundary_scanner_locale": "zh-cn",
+                            "pre_tags": [""],
+                            "post_tags": [""],
+                            "fields": {
+                              "content": {}
+                            }
+                          },
+                          "post_filter": {
+                            "range": {
+                              "publish": {
+                                "gte": "{{startTime}}",
+                                "lte": "{{endTime}}"
+                              }
+                            }
+                          },
+                          "query": {
+                            "multi_match": {
+                              "query": "{{input}}",
+                              "fields": ["content","title^3"],
+                              "analyzer": "ik_smart"
+                            }
+                          },
+                          "size": {{size}},
+                          "from": {{from}}
+                        }""").build();
+        Script singleScript = Script.builder().withId("search_by_single").withLanguage("mustache")
+                .withSource("""
+                        {
+                          "_source": {
+                            "includes": ["id","title","publish","office","like","dislike"]
+                          },
+                          "highlight": {
+                            "boundary_chars": "{{{boundary_chars}}}",
+                            "boundary_scanner_locale": "zh-cn",
+                            "pre_tags": [""],
+                            "post_tags": [""],
+                            "fields": {
+                              "content": {
+                                "highlight_query": {
+                                  "multi_match": {
+                                    "query": "{{input}}",
+                                    "fields": ["content"],
+                                    "analyzer": "ik_smart"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "post_filter": {
+                            "range": {
+                              "publish": {
+                                "gte": "{{startTime}}",
+                                "lte": "{{endTime}}"
+                              }
+                            }
+                          },
+                          "query": {
+                            "multi_match": {
+                              "query": "{{input}}",
+                              "fields": ["{{field}}"],
+                              "analyzer": "ik_smart"
+                            }
+                          },
+                          "size": {{size}},
+                          "from": {{from}}
+                        }""").build();
+        try {
+            elasticsearchOperations.deleteScript("search_by_all");
+            log.info("Delete script success.");
+        } catch (Exception e) {
+            log.error("Delete script error: " + e.getMessage());
+        }
+        try {
+            elasticsearchOperations.deleteScript("search_by_single");
+            log.info("Delete script success.");
+        } catch (Exception e) {
+            log.error("Delete script error: " + e.getMessage());
+        }
+        try {
+            elasticsearchOperations.putScript(allScript);
+            elasticsearchOperations.putScript(singleScript);
+            log.info("Put script success.");
+        } catch (Exception e) {
+            log.error("Put script error: " + e.getMessage());
+            exit(-1);
+        }
     }
 
     @Operation(summary = "搜索结果列表展示", description =
@@ -69,7 +163,7 @@ public class SearchController {
     @GetMapping("/list")
     public ResponseEntity<Response<SearchList>> searchLaws(@RequestParam(name = "input") String input,
                                                            @RequestParam(name = "searchType", required = false,
-                                                                   defaultValue = "ALL") Integer searchTypeInt,
+                                                                   defaultValue = "0") Integer searchTypeInt,
                                                            @RequestParam(name = "resultType") List<Integer> resultTypeInt,
                                                            @RequestParam(name = "startTime", required = false,
                                                                    defaultValue = "-9999-01-01") LocalDate startTime,
@@ -100,45 +194,46 @@ public class SearchController {
             searchList.setTotal(0);
 
             Pageable pageable = Pageable.ofSize(pageSize).withPage(pageNumber);
-            HighlightParameters highlightParameters =
-                    HighlightParameters.builder().withBoundaryScannerLocale("zh-cn")
-                            .withBoundaryChars(".,!?; \t\n，。！？；、").withPreTags("").withPostTags("").build();
+            String boundary_chars = ".,!?; \\t\\n，。！？；、";
             for (Integer typeInt : resultTypeInt) {
-                ResultType type = ResultType.values()[typeInt];
-                if (type == ResultType.LAW) {
-                    List<String> fields = switch (searchType) {
-                        case ALL -> List.of("content", "title^3");
-                        case TITLE -> List.of("title");
-                        case SOURCE -> List.of("office");
+                if (typeInt == ResultType.LAW.ordinal()) {
+                    String fields = switch (searchType) {
+                        case TITLE -> "title";
+                        case SOURCE -> "office";
+                        default -> "content";
                     };
-                    List<HighlightField> highlightFields = List.of(new HighlightField("content"));
-                    NativeQueryBuilder nativeQueryBuilder =
-                            NativeQuery.builder().withQuery(query -> query.multiMatch(multiMatch -> multiMatch.query(input).fields(fields)
-                                            .analyzer("ik_smart")))
-                                    .withSourceFilter(new FetchSourceFilterBuilder().withIncludes("id", "title",
-                                            "content", "publish", "office", "like", "dislike").build())
-                                    .withFilter(filter -> filter.range(range -> range.field("publish")
-                                            .gte(JsonData.of(startTime.toString()))
-                                            .lte(JsonData.of(endTime.toString()))))
-                                    .withHighlightQuery(new HighlightQuery(new Highlight(highlightParameters,
-                                            highlightFields), null))    // HighlightQuery的第二个参数我不知道是干啥的，反正放个null也行
-                                    .withPageable(pageable);
-                    Query searchQuery = nativeQueryBuilder.build();
-                    SearchHits<Laws> lawsData = elasticsearchOperations.search(searchQuery, Laws.class);
+                    SearchHits<Laws> lawsData;
+                    if (searchType == SearchType.ALL) {
+                        lawsData = elasticsearchOperations.search(SearchTemplateQuery.builder()
+                                .withId("search_by_all").withParams(Map.of("input", input, "startTime",
+                                        startTime.toString(), "endTime", endTime.toString(), "size",
+                                        pageable.getPageSize(), "from", pageable.getOffset(), "boundary_chars",
+                                        boundary_chars)).build(), Laws.class);
+                    } else {
+                        lawsData = elasticsearchOperations.search(SearchTemplateQuery.builder()
+                                .withId("search_by_single").withParams(Map.of("input", input, "field",
+                                        fields, "startTime", startTime.toString(),
+                                        "endTime", endTime.toString(), "size", pageable.getPageSize(), "from",
+                                        pageable.getOffset(), "boundary_chars", boundary_chars)).build(), Laws.class);
+                    }
                     searchList.setTotal(searchList.getTotal() + (int) lawsData.getTotalHits());
                     for (SearchHit<Laws> data : lawsData) {
                         SearchList.ResultItem resultItem = new SearchList.ResultItem();
                         resultItem.setId(data.getContent().getId());
                         resultItem.setTitle(data.getContent().getTitle());
-                        if (searchType == SearchType.ALL && !data.getHighlightField("content").isEmpty()) {
-                            resultItem.setDescription(String.join("...", data.getHighlightField("content")).replaceAll(
-                                    "\n", ""));
-                        } else {
-                            if (data.getContent().getContent().length() > 200) {
-                                resultItem.setDescription(data.getContent().getContent().substring(0, 200).replaceAll("\n"
-                                        , ""));
-                            } else {
-                                resultItem.setDescription(data.getContent().getContent().replaceAll("\n", ""));
+                        resultItem.setDescription(String.join("...", data.getHighlightField("content")).replaceAll(
+                                "\n", ""));
+                        if (resultItem.getDescription().isEmpty()) {    // Highlight is empty 正文中可能没有关键词
+                            Laws laws = elasticsearchOperations.get(data.getContent().getId(), Laws.class);
+                            if (laws != null) {
+                                String content = laws.getContent();
+                                if (content != null) {
+                                    resultItem.setDescription(content.substring(0, Math.min(content.length(), 200)));
+                                }
+                            }
+                            if (resultItem.getDescription().isEmpty()) {    // Content is still empty(get content
+                                // failed)
+                                resultItem.setDescription("无内容");
                             }
                         }
                         resultItem.setDate(data.getContent().getPublish());
@@ -149,14 +244,13 @@ public class SearchController {
                         resultItem.getFeedbackCnt().setDislikes(data.getContent().getDislike());
                         searchList.getResults().add(resultItem);
                     }
-                } else if (type == ResultType.JUDGEMENT) {
+                } else if (typeInt == ResultType.JUDGEMENT.ordinal()) {
                     return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.toString(), "Not " +
                             "implemented."), HttpStatus.BAD_REQUEST);
                 }
             }
             log.info("Get search result list success. Total: " + searchList.getTotal());
-            return new ResponseEntity<>(new Response<>(true, searchList, "0", "Success."),
-                    HttpStatus.OK);
+            return new ResponseEntity<>(new Response<>(true, searchList, "0", ""), HttpStatus.OK);
         } catch (Exception e) {
             log.error("Get search result list error: " + e.getMessage());
             return new ResponseEntity<>(new Response<>(false, null, HttpStatus.INTERNAL_SERVER_ERROR.toString(),
@@ -195,8 +289,7 @@ public class SearchController {
             detail.setResultType(ResultType.LAW.ordinal());
             detail.setLink(laws.getUrl());
             log.info("Get search result detail success. Id: " + id);
-            return new ResponseEntity<>(new Response<>(true, detail, "0", "Success."),
-                    HttpStatus.OK);
+            return new ResponseEntity<>(new Response<>(true, detail, "0", ""), HttpStatus.OK);
         } catch (Exception e) {
             log.error("Get search result detail error: " + e.getMessage());
             return new ResponseEntity<>(new Response<>(false, null, HttpStatus.INTERNAL_SERVER_ERROR.toString(),
