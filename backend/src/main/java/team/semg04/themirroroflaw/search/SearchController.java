@@ -64,20 +64,32 @@ public class SearchController {
                           "post_filter": {
                             "range": {
                               "publish": {
-                                "gte": "{{startTime}}",
-                                "lte": "{{endTime}}"
+                                "gte": "{{{startTime}}}",
+                                "lte": "{{{endTime}}}"
                               }
                             }
                           },
                           "query": {
-                            "multi_match": {
-                              "query": "{{input}}",
-                              "fields": ["content","title^3"],
-                              "analyzer": "ik_smart"
+                            "bool": {
+                              "must": {
+                                  "multi_match": {
+                                    "query": "{{{input}}}",
+                                    "fields": ["content", "title^3"],
+                                    "analyzer": "ik_smart"
+                                  }
+                              },
+                              "should": {
+                                  "multi_match": {
+                                  "query": "中华人民共和国",
+                                  "fields": ["title"],
+                                  "analyzer": "ik_smart",
+                                  "boost": 2
+                                  }
+                              }
                             }
                           },
-                          "size": {{size}},
-                          "from": {{from}}
+                          "size": {{{size}}},
+                          "from": {{{from}}}
                         }""").build();
         Script singleScript = Script.builder().withId("search_by_single").withLanguage("mustache")
                 .withSource("""
@@ -94,7 +106,7 @@ public class SearchController {
                               "content": {
                                 "highlight_query": {
                                   "multi_match": {
-                                    "query": "{{input}}",
+                                    "query": "{{{input}}}",
                                     "fields": ["content"],
                                     "analyzer": "ik_smart"
                                   }
@@ -105,20 +117,32 @@ public class SearchController {
                           "post_filter": {
                             "range": {
                               "publish": {
-                                "gte": "{{startTime}}",
-                                "lte": "{{endTime}}"
+                                "gte": "{{{startTime}}}",
+                                "lte": "{{{endTime}}}"
                               }
                             }
                           },
                           "query": {
-                            "multi_match": {
-                              "query": "{{input}}",
-                              "fields": ["{{field}}"],
-                              "analyzer": "ik_smart"
+                            "bool": {
+                              "must": {
+                                  "multi_match": {
+                                    "query": "{{{input}}}",
+                                    "fields": ["{{{field}}}"],
+                                    "analyzer": "ik_smart"
+                                  }
+                              },
+                              "should": {
+                                  "multi_match": {
+                                  "query": "中华人民共和国",
+                                  "fields": ["title"],
+                                  "analyzer": "ik_smart",
+                                  "boost": 2
+                                  }
+                              }
                             }
                           },
-                          "size": {{size}},
-                          "from": {{from}}
+                          "size": {{{size}}},
+                          "from": {{{from}}}
                         }""").build();
         try {
             elasticsearchOperations.deleteScript("search_by_all");
