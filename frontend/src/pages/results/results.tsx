@@ -9,7 +9,7 @@ import {
 } from "antd";
 import { LikeOutlined, DislikeOutlined, MoreOutlined } from "@ant-design/icons";
 import "./results.css";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import SearchBox from "../../components/SearchBox/SearchBox";
 import { RadialTreeGraph } from "@ant-design/graphs";
 import rule from "../../assets/rule.svg";
@@ -35,73 +35,6 @@ export default function ResultsPage() {
     ["资讯", "4"],
   ]);
   const pageSize = 10; //默认页面记录条数
-  const resultList: ResultItemProps[] = [
-    {
-      id: 1,
-      title: "中共中央印发《全国干部教育培训规划(2023—2027年)》",
-      description:
-        "近日，中共中央印发了《全国干部教育培训规划（2023－2027年）》（以下简称《规划》），并发出通知，要求各地区各部门结合实际认真贯彻落实。通知指出，制定实施《规划》是党中央着眼新时代新征程党的使命任务作出的重要部署。",
-      date: "2023-12-02T18:22:54.739Z",
-      resultType: 0,
-      source: "中国共产党中央委员会",
-      feedbackCnt: {
-        likes: 23,
-        dislikes: 1,
-      },
-    },
-    {
-      id: 2,
-      title: "中共中央办公厅、国务院办公厅关于调整应急管理部职责机构编制的通知",
-      description:
-        "根据《中国共产党机构编制工作条例》和党中央关于国家综合性消防救援队伍整合改革部署，经报党中央、国务院批准，现将应急管理部职责、机构、编制调整事项通知如下。",
-      date: "2023-12-02T18:22:54.739Z",
-      resultType: 2,
-      source: "中共中央办公厅",
-      feedbackCnt: {
-        likes: 55,
-        dislikes: 9,
-      },
-    },
-    {
-      id: 3,
-      title: "Ice-cream is a kind of good food",
-      description:
-        "近日，中共中央印发了《全国干部教育培训规划（2023－2027年）》（以下简称《规划》），并发出通知，要求各地区各部门结合实际认真贯彻落实。通知指出，制定实施《规划》是党中央着眼新时代新征程党的使命任务作出的重要部署。",
-      date: "2023-12-02T18:22:54.739Z",
-      resultType: 1,
-      source: "全国人大常委会",
-      feedbackCnt: {
-        likes: 23,
-        dislikes: 1,
-      },
-    },
-    {
-      id: 4,
-      title: "中共中央印发《全国干部教育培训规划(2023—2027年)》",
-      description:
-        "近日，中共中央印发了《全国干部教育培训规划（2023－2027年）》（以下简称《规划》），并发出通知，要求各地区各部门结合实际认真贯彻落实。通知指出，制定实施《规划》是党中央着眼新时代新征程党的使命任务作出的重要部署。",
-      date: "2023-12-02T18:22:54.739Z",
-      resultType: 3,
-      source: "Swagger",
-      feedbackCnt: {
-        likes: 23,
-        dislikes: 1,
-      },
-    },
-    {
-      id: 5,
-      title: "中共中央印发《全国干部教育培训规划(2023—2027年)》",
-      description:
-        "近日，中共中央印发了《全国干部教育培训规划（2023－2027年）》（以下简称《规划》），并发出通知，要求各地区各部门结合实际认真贯彻落实。通aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa。",
-      date: "2023-12-02T18:22:54.739Z",
-      resultType: 4,
-      source: "xx记者",
-      feedbackCnt: {
-        likes: 23,
-        dislikes: 1,
-      },
-    },
-  ];
   interface NodeInfo {
     id: string; //节点的唯一标识符
     value: string; //节点值（显示出来的）
@@ -124,11 +57,6 @@ export default function ResultsPage() {
     },
     desc: "Oracle Java 是广受欢迎的编程语言和开发平台。它有助于企业降低成本、缩短开发周期、推动创新以及改善应用服务。如今，Java 仍是企业和开发人员的首选开发平台...",
   };
-  //搜索结果列表展示
-  const [results, setResults] = useState<{
-    results: ResultItemProps[];
-    total: number;
-  }>({ results: resultList, total: resultList.length });
   const [searchProps, setSearchProps] = useState<SearchProps>({
     input: "",
     searchType: 0,
@@ -136,9 +64,13 @@ export default function ResultsPage() {
   //初始页码
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [paramsStr, setParamsStr] = useState<string | null>(null);
+
+  //路由值更新时更新页面为0，然后交由页面更新的useEffect处理
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [location.search]);
+
   //路由参数的解析和处理，并基于此进行请求
-  //这部分只会在每次路由值更新和分页选择时运行
-  const prevCurrentPage = useRef(currentPage);
   useEffect(() => {
     //location.search返回值每次更新，你把大家都害死啦！！！
     const params = new URLSearchParams(location.search);
@@ -176,14 +108,10 @@ export default function ResultsPage() {
       pageSize: String(pageSize),
       pageNumber: String(currentPage),
     };
-    //TODO:如果只是改变路由参数，则当前页面置0，暂时考虑不完善一点
-    if (prevCurrentPage.current == currentPage) {
-      setCurrentPage(0);
-    }
     // console.log(new URLSearchParams(requestParams).toString());
     setParamsStr(new URLSearchParams(requestParams).toString());
     //注意：搜索结果的请求参数均不在这一页直接维护，而是通过路由值获取
-  }, [location.search, currentPage]);
+  }, [currentPage]);
 
   //请求函数，注意要写在最外层
   const {
