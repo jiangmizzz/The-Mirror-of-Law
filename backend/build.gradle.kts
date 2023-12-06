@@ -25,6 +25,8 @@ dependencies {
         exclude(group = "org.mybatis", module = "mybatis-spring")
     }
     implementation("org.mybatis:mybatis-spring:3.0.3")
+    implementation("com.kennycason:kumo-core:1.28")
+    implementation("com.kennycason:kumo-tokenizers:1.28")
     runtimeOnly("com.alibaba:druid-spring-boot-starter:1.2.16")
     runtimeOnly("com.mysql:mysql-connector-j")
     compileOnly("org.projectlombok:lombok")
