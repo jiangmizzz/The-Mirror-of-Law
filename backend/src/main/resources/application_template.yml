@@ -12,6 +12,8 @@ spring:
         username: <username>
         password: <password>
         type: com.alibaba.druid.pool.DruidDataSource
+        druid:
+            initial-size: 1
 
 logging:
     level:
@@ -37,3 +39,8 @@ mybatis-plus:
     global-config:
         db-config:
             id-type: AUTO
+
+spark-model:
+    appid: <appid>
+    apiSecret: <apiSecret>
+    apiKey: <apiKey>
