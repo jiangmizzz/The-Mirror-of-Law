@@ -9,7 +9,7 @@ import lombok.Data;
 @TableName("users")
 public class User {
     @TableId(value = "id", type = IdType.AUTO)
-    Integer id;
+    Long id;
     String username;
     String email;
     String password;
