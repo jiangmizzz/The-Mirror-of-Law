@@ -19,7 +19,10 @@ import org.springframework.data.elasticsearch.core.query.SearchTemplateQuery;
 import org.springframework.data.elasticsearch.core.script.Script;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import team.semg04.themirroroflaw.Response;
 import team.semg04.themirroroflaw.search.entity.Laws;
 
@@ -32,7 +35,6 @@ import static java.lang.System.exit;
 
 @Slf4j
 @RestController
-@CrossOrigin(origins = "http://localhost:5173")
 @RequestMapping("/api/search")
 @Tag(name = "Search", description = "搜索结果处理")
 public class SearchController {
@@ -201,12 +203,12 @@ public class SearchController {
             // Check parameters
             if (pageSize <= 0 || pageSize > 50) {
                 log.error("Get search result list error: Invalid pageSize. pageSize: " + pageSize);
-                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.toString(),
+                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(),
                         "Invalid pageSize. PageSize should be in range [1, 50]."), HttpStatus.BAD_REQUEST);
             }
             if (pageNumber < 0 || pageNumber + pageSize > 10000) {
                 log.error("Get search result list error: Invalid pageNumber. pageNumber: " + pageNumber);
-                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.toString(),
+                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(),
                         "Invalid pageNumber. PageNumber should be in range [0, 10000 - pageSize]."),
                         HttpStatus.BAD_REQUEST);
             }
@@ -269,15 +271,15 @@ public class SearchController {
                         searchList.getResults().add(resultItem);
                     }
                 } else if (typeInt == ResultType.JUDGEMENT.ordinal()) {
-                    return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.toString(), "Not " +
+                    return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(), "Not " +
                             "implemented."), HttpStatus.BAD_REQUEST);
                 }
             }
             log.info("Get search result list success. Total: " + searchList.getTotal());
-            return new ResponseEntity<>(new Response<>(true, searchList, "0", ""), HttpStatus.OK);
+            return new ResponseEntity<>(new Response<>(true, searchList, 0, ""), HttpStatus.OK);
         } catch (Exception e) {
             log.error("Get search result list error: " + e.getMessage());
-            return new ResponseEntity<>(new Response<>(false, null, HttpStatus.INTERNAL_SERVER_ERROR.toString(),
+            return new ResponseEntity<>(new Response<>(false, null, HttpStatus.INTERNAL_SERVER_ERROR.value(),
                     "Internal server error."), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -300,7 +302,7 @@ public class SearchController {
             Laws laws = elasticsearchOperations.get(id, Laws.class);
             if (laws == null) {
                 log.error("Get search result detail error: LawsData not found. Id: " + id);
-                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.NOT_FOUND.toString(),
+                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.NOT_FOUND.value(),
                         "LawsData not found."), HttpStatus.NOT_FOUND);
             }
             detail.setTitle(laws.getTitle());
@@ -313,10 +315,10 @@ public class SearchController {
             detail.setResultType(ResultType.LAW.ordinal());
             detail.setLink(laws.getUrl());
             log.info("Get search result detail success. Id: " + id);
-            return new ResponseEntity<>(new Response<>(true, detail, "0", ""), HttpStatus.OK);
+            return new ResponseEntity<>(new Response<>(true, detail, 0, ""), HttpStatus.OK);
         } catch (Exception e) {
             log.error("Get search result detail error: " + e.getMessage());
-            return new ResponseEntity<>(new Response<>(false, null, HttpStatus.INTERNAL_SERVER_ERROR.toString(),
+            return new ResponseEntity<>(new Response<>(false, null, HttpStatus.INTERNAL_SERVER_ERROR.value(),
                     "Internal server error."), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

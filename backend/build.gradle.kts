@@ -21,6 +21,7 @@ dependencies {
     implementation("org.springframework.data:spring-data-elasticsearch")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
+    implementation("org.springframework.boot:spring-boot-starter-security:3.2.0")
     implementation("com.baomidou:mybatis-plus-boot-starter:3.5.3.1") {
         exclude(group = "org.mybatis", module = "mybatis-spring")
     }

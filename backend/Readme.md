@@ -20,6 +20,9 @@ spring.elasticsearch.password=<password>
 spring.datasource.url=jdbc:mysql://<127.0.0.1>:3306/mirror_of_law?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false
 spring.datasource.username=<username>
 spring.datasource.password=<password>
+#----Security----#
+rememberMe.key=remember-me-key
+rememberMe.cookieDomain=127.0.0.1
 #------------------#
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 spring.datasource.type=com.alibaba.druid.pool.DruidDataSource
