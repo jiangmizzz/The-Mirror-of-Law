@@ -69,6 +69,7 @@ public class SpringSecurityConfig {
                         .requestMatchers("/api/user/login").permitAll()
                         .requestMatchers("/api/user/register").permitAll()
                         .requestMatchers("/api/search/**").permitAll()
+                        .requestMatchers("/api/ai/**").permitAll()
                         .requestMatchers("/swagger-ui/**").permitAll()
                         .requestMatchers("api-docs/**").permitAll()
                         .anyRequest().authenticated()

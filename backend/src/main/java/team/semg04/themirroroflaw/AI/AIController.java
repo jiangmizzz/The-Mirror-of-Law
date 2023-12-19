@@ -40,10 +40,9 @@ public class AIController {
         try {
             result = SparkModelConnector.getAnswer(extractPrompt + input);
             result = result.replace(" ", "").replace("；", ";");
-            return new ResponseEntity<>(new Response<>(true, result, "0", "Success."),
-                    HttpStatus.OK);
+            return new ResponseEntity<>(new Response<>(true, result, 0, ""), HttpStatus.OK);
         } catch (Exception e) {
-            return new ResponseEntity<>(new Response<>(false, null, HttpStatus.INTERNAL_SERVER_ERROR.toString(),
+            return new ResponseEntity<>(new Response<>(false, null, HttpStatus.INTERNAL_SERVER_ERROR.value(),
                     "Internal server error."), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
