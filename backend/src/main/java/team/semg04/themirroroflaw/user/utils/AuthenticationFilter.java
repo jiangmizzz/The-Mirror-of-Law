@@ -46,9 +46,9 @@ public class AuthenticationFilter extends AbstractAuthenticationProcessingFilter
             Map<?, ?> map = objectMapper.readValue(text, Map.class);
 
             if (map.get("email") == null) {
-                throw new BadCredentialsException("Email is null");
+                throw new BadCredentialsException("Email is null.");
             } else if (map.get("password") == null) {
-                throw new BadCredentialsException("Password is null");
+                throw new BadCredentialsException("Password is null.");
             }
 
             String username = (String) map.get("email");
@@ -56,7 +56,7 @@ public class AuthenticationFilter extends AbstractAuthenticationProcessingFilter
             User user = userService.getByEmail(username);
 
             if (user == null) {
-                throw new BadCredentialsException("User not found");
+                throw new BadCredentialsException("User not found.");
             }
 
             UsernamePasswordAuthenticationToken authRequest = new UsernamePasswordAuthenticationToken(user.getId(),
