@@ -12,6 +12,8 @@
 其中，`spring.elasticsearch.uris`为Elasticsearch服务器地址，`spring.elasticsearch.username`和`spring.elasticsearch.password`为Elasticsearch服务器的用户名和密码。
 
 `spring.datasource.url`为MySQL数据库地址，`spring.datasource.username`和`spring.datasource.password`为MySQL数据库的用户名和密码。
+
+`spark-model.appid`、`spark-model.apiSecret`和`spark-model.apiKey`为星火大模型的应用ID、API Secret和API Key。
 ```properties
 #-----EDIT ME-----#
 spring.elasticsearch.uris=<127.0.0.1>
@@ -20,6 +22,11 @@ spring.elasticsearch.password=<password>
 spring.datasource.url=jdbc:mysql://<127.0.0.1>:3306/mirror_of_law?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false
 spring.datasource.username=<username>
 spring.datasource.password=<password>
+spark-model.appid=<appid>
+spark-model.apiSecret=<apiSecret>
+spark-model.apiKey=<apiKey>
+#------------------#
+
 #----Security----#
 rememberMe.key=remember-me-key
 rememberMe.cookieDomain=127.0.0.1

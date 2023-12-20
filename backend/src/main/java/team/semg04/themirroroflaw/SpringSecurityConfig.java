@@ -84,7 +84,7 @@ public class SpringSecurityConfig {
                                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                                     PrintWriter out = response.getWriter();
                                     Response<Void> ret = new Response<>(false, null,
-                                            HttpStatus.UNAUTHORIZED.value(), "User not logged in");
+                                            HttpStatus.UNAUTHORIZED.value(), "User not logged in.");
                                     out.write(objectMapper.writeValueAsString(ret));
                                     out.flush();
                                     out.close();
@@ -159,7 +159,7 @@ public class SpringSecurityConfig {
         public User loadUserByUsername(String id) throws UsernameNotFoundException {
             team.semg04.themirroroflaw.user.entity.User user = userService.getById(id);
             if (user == null) {
-                throw new UsernameNotFoundException("User not found");
+                throw new UsernameNotFoundException("User not found.");
             }
             return new User(user.getId().toString(), user.getPassword(), createAuthorityList("USER"));
         }
@@ -193,20 +193,20 @@ public class SpringSecurityConfig {
 
             if (exception instanceof BadCredentialsException) {
                 switch (exception.getMessage()) {
-                    case "User not found":
+                    case "User not found.":
                         response.setStatus(HttpServletResponse.SC_NOT_FOUND);
                         ret.setErrorCode(2);
-                        ret.setErrorMessage("User not found");
+                        ret.setErrorMessage("User not found.");
                         break;
 
-                    case "Wrong password":
+                    case "Wrong password.":
                         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                         ret.setErrorCode(1);
-                        ret.setErrorMessage("Wrong password");
+                        ret.setErrorMessage("Wrong password.");
                         break;
 
-                    case "Username is null":
-                    case "Password is null":
+                    case "Email is null.":
+                    case "Password is null.":
                         response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                         ret.setErrorCode(HttpStatus.BAD_REQUEST.value());
                         ret.setErrorMessage(exception.getMessage());
@@ -215,13 +215,13 @@ public class SpringSecurityConfig {
                     default:
                         response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
                         ret.setErrorCode(HttpStatus.INTERNAL_SERVER_ERROR.value());
-                        ret.setErrorMessage("Internal server error");
+                        ret.setErrorMessage("Internal server error.");
                         break;
                 }
             } else {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 ret.setErrorCode(HttpStatus.UNAUTHORIZED.value());
-                ret.setErrorMessage("User not logged in");
+                ret.setErrorMessage("User not logged in.");
             }
             out.write(new ObjectMapper().writeValueAsString(ret));
             out.flush();

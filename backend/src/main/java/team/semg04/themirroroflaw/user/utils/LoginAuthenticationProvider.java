@@ -27,12 +27,12 @@ public class LoginAuthenticationProvider implements AuthenticationProvider {
         String password = authentication.getCredentials().toString();
         User user = userService.getById(id);
         if (user == null) {
-            throw new BadCredentialsException("User not found");
+            throw new BadCredentialsException("User not found.");
         }
 
         PasswordEncoder passwordEncoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();
         if (!passwordEncoder.matches(password, user.getPassword())) {
-            throw new BadCredentialsException("Wrong password");
+            throw new BadCredentialsException("Wrong password.");
         }
 
         return new UsernamePasswordAuthenticationToken(id, password, authentication.getAuthorities());
