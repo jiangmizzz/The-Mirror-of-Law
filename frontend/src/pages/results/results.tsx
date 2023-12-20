@@ -64,17 +64,10 @@ export default function ResultsPage() {
   //初始页码
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [paramsStr, setParamsStr] = useState<string | null>(null);
-
-  //路由值更新时更新页面为0，然后交由页面更新的useEffect处理
-  useEffect(() => {
-    setCurrentPage(0);
-  }, [location.search]);
-
-  //路由参数的解析和处理，并基于此进行请求
-  useEffect(() => {
-    //location.search返回值每次更新，你把大家都害死啦！！！
+  //根据路由参数重新请求搜索结果
+  function reSearch() {
     const params = new URLSearchParams(location.search);
-    // console.log(params.toString());
+    console.log(params.toString());
     const extraParams: Record<string, string | string[]> = {};
     const types: string[] = [];
     if (params.get("resultTypes")) {
@@ -111,6 +104,21 @@ export default function ResultsPage() {
     // console.log(new URLSearchParams(requestParams).toString());
     setParamsStr(new URLSearchParams(requestParams).toString());
     //注意：搜索结果的请求参数均不在这一页直接维护，而是通过路由值获取
+  }
+
+  //路由值更新时更新当前页面为0，并重新请求
+  useEffect(() => {
+    //location.search返回值每次更新，你把大家都害死啦！！！
+    if (currentPage != 0) {
+      setCurrentPage(0);
+    } else {
+      reSearch();
+    }
+  }, [location.search]);
+
+  //路由参数的解析和处理，并基于此进行请求
+  useEffect(() => {
+    reSearch();
   }, [currentPage]);
 
   //请求函数，注意要写在最外层

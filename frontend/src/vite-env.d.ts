@@ -13,3 +13,10 @@ export interface SearchProps {
   startTime?: string;
   endTime?: string;
 }
+//用户信息
+export interface UserInfo {
+  id: number; //唯一的用户id
+  userName: string; //唯一的用户名
+  email: string; //用户的注册邮箱
+  history: string[]; //最近20条搜索记录（输入值）
+}

@@ -1,4 +1,4 @@
-import type { Response } from "./vite-env";
+import type { Response, UserInfo } from "./vite-env";
 
 const prefix = "http://127.0.0.1:8080/api";
 export async function getFetcher(key: string) {
@@ -11,6 +11,24 @@ export async function getFetcher(key: string) {
   }
   console.log(resp);
   return resp.data;
+}
+//获取用户信息的专用GET接口（未登录不认为是Error）
+export async function getUserInfo(key: string): Promise<UserInfo | number> {
+  const resp = (await fetch(prefix + key, { mode: "cors" }).then((res) =>
+    res.json()
+  )) as Response<UserInfo>;
+
+  if (!resp.success) {
+    if (resp.errorCode == "401") {
+      //没有登录态
+      return -1;
+    } else {
+      throw new Error(resp.errorCode + ": " + resp.errorMessage);
+    }
+  } else {
+    console.log(resp);
+    return resp.data!;
+  }
 }
 
 export async function postFetcher(
