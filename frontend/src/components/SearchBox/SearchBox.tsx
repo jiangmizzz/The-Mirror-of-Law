@@ -9,8 +9,9 @@ import {
   Tooltip,
   Drawer,
   message,
+  Avatar,
 } from "antd";
-import { BulbOutlined } from "@ant-design/icons";
+import { BulbOutlined, UserOutlined } from "@ant-design/icons";
 // import type { MenuProps } from "antd";
 import { useEffect, useState } from "react";
 import "./SearchBox.css";
@@ -20,8 +21,20 @@ import type { CheckboxValueType } from "antd/es/checkbox/Group";
 import aiIcon from "../../assets/AI.svg";
 import { useNavigate } from "react-router-dom";
 import type { SearchProps } from "../../vite-env";
+import TextArea from "antd/es/input/TextArea";
+import AI_avatar from "../../assets/iconSideChatDoc.png";
 
 const { RangePicker } = DatePicker;
+
+// TODO， 没有相应接口，mock数据
+async function getAiResponse(userMessage: string): Promise<string> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(`AI 模型的响应：你说的是 "${userMessage}" 吗？`);
+    }, 1000);
+  });
+}
+
 //子组件，搜索组件
 export default function SearchBox(props: {
   width: number;
@@ -46,6 +59,62 @@ export default function SearchBox(props: {
   const [timeRange, setTimeRange] = useState<string[]>(["", ""]);
   const [updateTime, setUpdateTime] = useState<number>(0); //更新时间
   const [ifAi, setAi] = useState<boolean>(false);
+  const [inputValueAI, setInputValueAI] = useState(""); // AI chatbot textarea中的文本（用户输入的信息）
+
+  // 关闭抽屉
+  const onClose = () => {
+    setAi(false);
+  };
+
+  // 聊天消息的状态
+  const [chatMessages, setChatMessages] = useState([
+    {
+      content:
+        "你好！我是AI智能助手，我将对搜索框输入的内容进行提取关键词并呈现给你。",
+      type: "ai",
+    },
+  ]);
+
+  // 在 useEffect 中监听 inputValueAI 变化，并在变化后执行 setInputValueAI("")
+  useEffect(() => {
+    setInputValueAI("");
+  }, [chatMessages]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInputValueAI(e.target.value);
+  };
+
+  // 处理用户输入并获取 AI 响应
+  const handleUserInput = async () => {
+    console.log("Input Value:", inputValueAI);
+    const userMessage = inputValueAI.trim();
+    // 空消息不做任何处理
+    if (userMessage === "") return;
+
+    // 将用户消息添加到聊天中
+    setChatMessages((prevMessages) => [
+      ...prevMessages,
+      { content: userMessage, type: "user" },
+    ]);
+
+    // TODO: 将用户消息发送到 AI 模型并获取 AI 响应
+    try {
+      // 发送用户消息到 AI 模型并获取 AI 响应
+      const aiResponse = await getAiResponse(userMessage);
+
+      // 将 AI 响应添加到聊天中
+      setChatMessages((prevMessages) => [
+        ...prevMessages,
+        { content: aiResponse, type: "ai" },
+      ]);
+    } catch (error) {
+      console.error("Failed to fetch AI response:", error);
+      message.error("获取 AI 响应失败！");
+    }
+
+    // 清除输入
+    setInputValueAI("");
+  };
 
   //在result页打开时需要初始化搜索选项
   useEffect(() => {
@@ -218,14 +287,83 @@ export default function SearchBox(props: {
           </Tooltip>
         )}
         <Drawer
-          title="AI智能关键词提取"
+          title="AI智能文档总结"
           placement="right"
-          onClose={() => setAi(false)}
+          onClose={onClose}
           open={ifAi}
+          extra={
+            <Space>
+              <Button
+                className="drawer-cancle-button"
+                type="primary"
+                onClick={onClose}
+              >
+                Cancel
+              </Button>
+            </Space>
+          }
+          className="custom-drawer"
+          styles={{
+            header: {
+              background: "linear-gradient(blue,#ffccff)",
+              color: "white",
+            },
+            body: {
+              background: "#fffafe",
+            },
+            footer: {
+              background: "linear-gradient(#ffccff,#ae8dff)",
+            },
+          }}
+          footer={
+            <div className="drawer-search">
+              <TextArea
+                placeholder="请输入文本"
+                autoSize={{ minRows: 2, maxRows: 6 }} // 设置自动调整大小的行数范围
+                value={inputValueAI}
+                onChange={handleInputChange}
+                onPressEnter={handleUserInput} // 处理用户按下 Enter 键发送消息
+              />
+              <Button type="primary" onClick={handleUserInput}>
+                Send
+              </Button>
+            </div>
+          }
         >
-          <p>Some contents...</p>
-          <p>Some contents...</p>
-          <p>Some contents...</p>
+          <div className="chat-container">
+            {chatMessages.map((message, index) => (
+              <div key={index} className="chat-message-box">
+                {message.type === "ai" && ( // AI message, 头像放在文本框前
+                  <div className="avatar">
+                    <img
+                      src={AI_avatar}
+                      alt="AI Avatar"
+                      style={{
+                        width: "160%",
+                        height: "160%",
+                        borderRadius: "50%",
+                      }}
+                    />
+                  </div>
+                )}
+                <div
+                  className={`message-content ${
+                    message.type === "ai" ? "ai" : "user"
+                  }`}
+                >
+                  {message.content}
+                </div>
+                {message.type === "user" && ( // user message, 头像放在文本框后
+                  <div className="avatar">
+                    <Avatar
+                      style={{ backgroundColor: "#2e95d3" }}
+                      icon={<UserOutlined />}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </Drawer>
         <Space.Compact size="large">
           {<SearchType />}
