@@ -79,6 +79,28 @@ const App: React.FC = () => {
     }
   }, [userData]);
 
+  //用户登出的trigger
+  const { trigger: logoutTrigger } = useSWRMutation<
+    Response<null>,
+    Error,
+    string,
+    null
+  >("/user/logout", postFetcher);
+
+  //用户登出
+  const logout = async () => {
+    const logoutRes = await logoutTrigger(null);
+    if (logoutRes.success) {
+      //登出成功
+      userStore.logout();
+      message.success("退出登录成功!");
+    } else {
+      message.error(
+        "退出登录失败!" + logoutRes.errorCode + ": " + logoutRes.errorMessage
+      );
+    }
+  };
+
   //子组件，用户信息栏
   function UserInfo() {
     const { token } = useToken();
@@ -123,28 +145,6 @@ const App: React.FC = () => {
         ),
       },
     ];
-
-    //用户登出的trigger
-    const { trigger: logoutTrigger } = useSWRMutation<
-      Response<null>,
-      Error,
-      string,
-      null
-    >("/user/logout", postFetcher);
-
-    //用户登出
-    const logout = async () => {
-      const logoutRes = await logoutTrigger(null);
-      if (logoutRes.success) {
-        //登出成功
-        userStore.logout();
-        message.success("退出登录成功!");
-      } else {
-        message.error(
-          "退出登录失败!" + logoutRes.errorCode + ": " + logoutRes.errorMessage
-        );
-      }
-    };
 
     if (userStore.ifLogin) {
       return (
