@@ -33,6 +33,7 @@ rememberMe.cookieDomain=127.0.0.1
 #------------------#
 spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 spring.datasource.type=com.alibaba.druid.pool.DruidDataSource
+spring.datasource.druid.initial-size=1
 mybatis-plus.configuration.map-underscore-to-camel-case=true
 mybatis-plus.configuration.log-impl=org.apache.ibatis.logging.stdout.StdOutImpl
 mybatis-plus.configuration.aggressive-lazy-loading=true

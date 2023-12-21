@@ -1,4 +1,4 @@
-package team.semg04.themirroroflaw.AI;
+package team.semg04.themirroroflaw.ai;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
