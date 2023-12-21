@@ -1,4 +1,4 @@
-package team.semg04.themirroroflaw.AI;
+package team.semg04.themirroroflaw.ai;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
