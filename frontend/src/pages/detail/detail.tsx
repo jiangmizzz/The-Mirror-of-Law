@@ -1,5 +1,5 @@
 // DetailPage.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import {
   Card,
@@ -18,7 +18,7 @@ import {
 } from "antd";
 import {
   ArrowLeftOutlined,
-  ArrowUpOutlined,
+  UserOutlined,
   CustomerServiceOutlined,
   SmileOutlined,
   BulbTwoTone,
@@ -31,27 +31,111 @@ import { useNavigate } from "react-router-dom";
 import useSWR from "swr";
 import { getFetcher } from "../../utils.ts";
 
-const { Search } = Input;
-const avatar_src = "../../assets/avatar.svg";
+const { TextArea } = Input;
+import AI_avatar from "../../assets/iconSideChatDoc.png";
+
+// TODO， 没有相应接口，mock数据
+async function getAiResponse(userMessage: string): Promise<string> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(`AI 模型的响应：你说的是 "${userMessage}" 吗？`);
+    }, 1000);
+  });
+}
 
 const DetailPage: React.FC = () => {
   const { id } = useParams(); // 根据url来获取params
   //   const [data, setData] = useState<any>({}); // 初始化为空对象
-  const [inputValue, setInputValue] = useState("");
+  const [inputValue, setInputValue] = useState(""); // AI chatbot textarea中的文本（用户输入的信息）
   const [messageApi, contextHolder] = message.useMessage(); // 骨架屏
   const [ifOpen, setOpen] = useState<boolean>(false); // 是否启用AI辅助功能（打开抽屉）
   const [isOpenFloatTooltip, setIsOpenFloatTooltip] = useState(true);
   const navigate = useNavigate();
 
-  // TODO: 加入AI功能后，要修改drawer-search的逻辑
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // AI部分
+  interface AiSummaryResponse {
+    res: string;
+  }
+
+  // TODO（协商AI请求类型）
+  const someType = "法律文书";
+
+  // 聊天消息的状态
+  const [chatMessages, setChatMessages] = useState([
+    {
+      content:
+        "你好！我是AI智能助手，我将帮你对这篇文章进行一个总结，并呈现一份内容概要。",
+      type: "ai",
+    },
+  ]);
+
+  // 在 useEffect 中监听 inputValue 变化，并在变化后执行 setInputValue("")
+  useEffect(() => {
+    setInputValue("");
+  }, [chatMessages]);
+
+  // 使用 useSWR 发送请求
+  const { data: AIdata, error: AIerror } = useSWR<AiSummaryResponse>(
+    `/ai/summarize?id=${id}&type=${someType}`,
+    getFetcher,
+    {
+      refreshInterval: 1000,
+    }
+  );
+  console.log("AI summary result:" + AIdata);
+
+  // 当获取 AI 摘要成功时，更新 chatMessages
+  useEffect(() => {
+    if (AIdata) {
+      setChatMessages((prevMessages) => [
+        ...prevMessages,
+        { content: AIdata.res, type: "ai" },
+      ]);
+    }
+  }, [AIdata]);
+
+  // 当获取 AI 摘要失败时，显示错误信息
+  if (AIerror) {
+    console.error("Failed to fetch AI summary:", AIerror);
+    message.error("获取 AI 摘要失败！");
+  }
+
+  // 处理用户输入并获取 AI 响应
+  const handleUserInput = async () => {
+    console.log("Input Value:", inputValue);
+    const userMessage = inputValue.trim();
+    // 空消息不做任何处理
+    if (userMessage === "") return;
+
+    // 将用户消息添加到聊天中
+    setChatMessages((prevMessages) => [
+      ...prevMessages,
+      { content: userMessage, type: "user" },
+    ]);
+
+    // TODO: 将用户消息发送到 AI 模型并获取 AI 响应
+    try {
+      // 发送用户消息到 AI 模型并获取 AI 响应
+      const aiResponse = await getAiResponse(userMessage);
+
+      // 将 AI 响应添加到聊天中
+      setChatMessages((prevMessages) => [
+        ...prevMessages,
+        { content: aiResponse, type: "ai" },
+      ]);
+    } catch (error) {
+      console.error("Failed to fetch AI response:", error);
+      message.error("获取 AI 响应失败！");
+    }
+
+    // 清除输入
+    setInputValue("");
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputValue(e.target.value);
   };
-  // AI辅助功能的搜索按钮处理事件
-  const onSearch = () => {
-    // 处理输入框的值
-    console.log("Input Value:", inputValue);
-  };
+
   // 打开抽屉（AI辅助功能）
   const showDrawer = () => {
     setOpen(true);
@@ -60,6 +144,7 @@ const DetailPage: React.FC = () => {
   const onClose = () => {
     setOpen(false);
   };
+
   // 回到上一个页面
   const goBackToLastPage = () => {
     navigate(-1); // 返回上一页
@@ -74,6 +159,7 @@ const DetailPage: React.FC = () => {
     // }, 700);
   };
 
+  // 获取详情数据部分
   // 向后端发起请求获取详情信息的返回体
   interface DetailData {
     title: string;
@@ -159,28 +245,12 @@ const DetailPage: React.FC = () => {
     );
   }
 
-  // 假数据
-  //   const data = {
-  //     title: "中共中央印发《全国干部教育培训规划(2023-2027年)》",
-  //     source: "新华社",
-  //     publishTime: "2023-10-16 19:35",
-  //     feedbackCnt: { likes: 30, dislikes: 2 },
-  //     content: `  新华社北京10月16日电 近日，中共中央印发了《全国干部教育培训规划（2023－2027年）》（以下简称《规划》），\n并发出通知，要求各地区各部门结合实际认真贯彻落实。\n 通知指出，制定实施《规划》是党中央着眼新时代新征程党的使命任务作出的重要部署。要把深入学习贯彻习近平新时代中国特色社会主义思想作为主题主线，坚持不懈用党的创新理论凝心铸魂、强基固本。\n要坚持把政治训练贯穿干部成长全周期，教育引导干部树立正确的权力观、政绩观、事业观，提高干部政治判断力、政治领悟力、政治执行力。要围绕贯彻落实党的二十大作出的重大战略部署，分层级分领域分专题开展履职能力培训，提高干部推动高质量发展本领、服务群众本领、防范化解风险本领。\n要构建完善的干部教育培训体系，发挥好党校（行政学院）干部教育培训主渠道主阵地作用，不断优化教育培训方式方法。\n要大力弘扬理论联系实际的马克思主义学风，力戒形式主义，勤俭规范办学，\n努力营造学习之风、朴素之风、清朗之风。..通知要求，各地区各部门贯彻落实《规划》中的重要情况和建议，要及时报告党中央。
-
-  // 	  《全国干部教育培训规划（2023－2027年）》全文如下。
-
-  // 	  干部教育培训是建设高素质干部队伍的先导性、基础性、战略性工程，在推进中国特色社会主义伟大事业和党的建设新的伟大工程中具有不可替代的重要地位和作用。为培养造就政治过硬、适应新时代要求、具备领导社会主义现代化建设能力的高素质干部队伍，结合干部教育培训工作实际，制定本规划。
-
-  // 	  一、总体要求
-
-  // 	  高举中国特色社会主义伟大旗帜，坚持马克思列宁主义、毛泽东思想、邓小平理论、“三个代表”重要思想、科学发展观，全面贯彻习近平新时代中国特色社会主义思想，深入贯彻习近平总书记关于党的建设的重要思想，深入贯彻党的二十大精神，认真落实新时代党的建设总要求和新时代党的组织路线，深刻领悟“两个确立”的决定性意义，增强“四个意识”、坚定“四个自信”、做到“两个维护”，把深入学习贯彻习近平新时代中国特色社会主义思想作为主题主线，以坚定理想信念宗旨为根本，以提高政治能力为关键，以增强推进中国式现代化建设本领为重点，紧紧围绕新时代新征程党的使命任务，持续深化党的创新理论武装，强化政治训练，加强履职能力培训，深入推进干部教育培训体系改革创新，增强教育培训的时代性、系统性、针对性、有效性，高质量教育培训干部，高水平服务党和国家事业发展，为以中国式现代化全面推进中华民族伟大复兴提供思想政治保证和能力支撑。
-
-  // 	  本规划的主要目标是：党的创新理论武装更加系统深入，用习近平新时代中国特色社会主义思想凝心铸魂取得显著成效，广大干部理想信念更加坚定、思想意志更加统一、行动步调更加一致，对党的创新理论更加笃信笃行，用以指导实践、推动工作更加自觉。政治训练更加扎实有效，广大干部党性更加坚强，作风更加过硬，政治判断力、政治领悟力、政治执行力不断提高，政治纪律和政治规矩意识进一步增强，自觉在政治立场、政治方向、政治原则、政治道路上同以习近平同志为核心的党中央保持高度一致。履职能力培训更加精准管用，广大干部贯彻新发展理念、构建新发展格局、推动高质量发展能力进一步提高，统筹发展和安全的能力不断提升，专业知识和人文综合素养更加完备。干部教育培训体系更加科学健全，培训内容更具时代性系统性，培训方法更具针对性有效性，培训保障更加坚实有力，培训制度更加规范完备，选育管用机制更加协同高效。`,
-  //     link: "https://www.gov.cn/zhengce/202310/content_6909454.htm?menuid=104",
-  //   };
   const { title, source, publishTime, feedbackCnt, content, link } = data;
   // 显示调试信息
   console.log(data);
+
+  // 点击抽屉蒙层不允许关闭抽屉
+  const maskClickClosable = false;
 
   // 正常显示页面
   return (
@@ -263,50 +333,6 @@ const DetailPage: React.FC = () => {
                 onClick={showDrawer}
               />
             </Tooltip>
-            <Drawer
-              title="AI智能文档总结"
-              placement="right"
-              onClose={onClose}
-              open={ifOpen}
-              closable={false} // 不能通过点击其他区域来关闭抽屉
-              extra={
-                <Space>
-                  <Button
-                    className="drawer-cancle-button"
-                    type="primary"
-                    onClick={onClose}
-                  >
-                    Cancel
-                  </Button>
-                </Space>
-              }
-              className="custom-drawer"
-              styles={{
-                header: {
-                  background: "linear-gradient( blue, pink)",
-                  color: "white",
-                },
-              }}
-              footer={
-                <div className="drawer-search">
-                  <div className="drawer-search-avatar">
-                    {/* 这里通过设置div块的背景图来显示avatar */}
-                  </div>
-                  <Search
-                    placeholder="input search text"
-                    style={{ width: "90%", paddingLeft: "5px" }}
-                    value={inputValue}
-                    onChange={handleInputChange}
-                    onSearch={onSearch}
-                    enterButton
-                  />
-                </div>
-              }
-            >
-              <p>Some contents...</p>
-              <p>Some contents...</p>
-              <p>Some contents...</p>
-            </Drawer>
           </FloatButton.Group>
           <Tooltip
             title="回到顶部"
@@ -325,6 +351,86 @@ const DetailPage: React.FC = () => {
               style={{ right: 100, backgroundColor: "#7464FA" }}
             />
           </Tooltip>
+          <Drawer
+            title="AI智能文档总结"
+            placement="right"
+            onClose={onClose}
+            open={ifOpen}
+            maskClosable={maskClickClosable} // 不能通过点击其他区域来关闭抽屉
+            extra={
+              <Space>
+                <Button
+                  className="drawer-cancle-button"
+                  type="primary"
+                  onClick={onClose}
+                >
+                  Cancel
+                </Button>
+              </Space>
+            }
+            className="custom-drawer"
+            styles={{
+              header: {
+                background: "linear-gradient(blue,#ffccff)",
+                color: "white",
+              },
+              body: {
+                background: "#fffafe",
+              },
+              footer: {
+                background: "linear-gradient(#ffccff,#ae8dff)",
+              },
+            }}
+            footer={
+              <div className="drawer-search">
+                <TextArea
+                  placeholder="请输入文本"
+                  autoSize={{ minRows: 2, maxRows: 6 }} // 设置自动调整大小的行数范围
+                  value={inputValue}
+                  onChange={handleInputChange}
+                  onPressEnter={handleUserInput} // 处理用户按下 Enter 键发送消息
+                />
+                <Button type="primary" onClick={handleUserInput}>
+                  Send
+                </Button>
+              </div>
+            }
+          >
+            <div className="chat-container">
+              {chatMessages.map((message, index) => (
+                <div key={index} className="chat-message-box">
+                  {message.type === "ai" && ( // AI message, 头像放在文本框前
+                    <div className="avatar">
+                      <img
+                        src={AI_avatar}
+                        alt="AI Avatar"
+                        style={{
+                          width: "160%",
+                          height: "160%",
+                          borderRadius: "50%",
+                        }}
+                      />
+                    </div>
+                  )}
+                  <div
+                    className={`message-content ${
+                      message.type === "ai" ? "ai" : "user"
+                    }`}
+                  >
+                    {message.content}
+                  </div>
+                  {message.type === "user" && ( // user message, 头像放在文本框后
+                    <div className="avatar">
+                      <Avatar
+                        style={{ backgroundColor: "#2e95d3" }}
+                        icon={<UserOutlined />}
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Drawer>
         </Card>
       }
     </div>

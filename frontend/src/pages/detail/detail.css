@@ -3,8 +3,20 @@
   margin-bottom: 16px;
   display: flex;
   flex-direction: row;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
+}
+
+.drawer-search textarea {
+  resize: none;
+  overflow-y: auto;
+  border: none;
+  box-shadow: none;
+  width: 100%;
+}
+
+.drawer-search button {
+  margin-left: 10px;
 }
 
 .custom-drawer .ant-drawer-title {
@@ -30,4 +42,44 @@
   padding-bottom: 11px;
   width: 8%;
   height: 20px;
+}
+
+.chat-message-box {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+/* 在 .ai 类的消息框中，右偏移头像的宽度 */
+.ai {
+  border-radius: 12px; /* 设置消息框的边框半径，使其呈现为圆角 */
+  padding: 12px;
+  margin-left: 16px;
+  background-color: #f0f0f0; /* 设置 AI 消息的背景颜色 */
+  margin-right: calc(20px + 8px); /* 偏移头像的宽度和右边距 */
+}
+/* 在 .user 类的消息框中，左偏移头像的宽度 */
+.user {
+  border-radius: 12px; /* 设置消息框的边框半径，使其呈现为圆角 */
+  padding: 12px;
+  margin-left: calc(20px + 8px); /* 偏移头像的宽度和左边距 */
+  background-color: #e6f7ff; /* 设置用户消息的背景颜色 */
+}
+
+.message-content {
+  width: 80%;
+  font-size: 14px; /* 设置消息文字的大小 */
+  line-height: 1.4; /* 设置行间距 */
+}
+
+.avatar {
+  border-radius: 50%; /* 设置头像的边框半径，使其呈现为圆形 */
+  width: 20px; /* 设置头像的宽度 */
+  height: 20px; /* 设置头像的高度 */
+  padding: 2px 2px;
+}
+
+.avatar img,
+.message-content {
+  vertical-align: middle;
 }
