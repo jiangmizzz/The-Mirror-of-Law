@@ -40,10 +40,8 @@ public class GraphController {
         try {
             // check if all neighbors exist
             for (Long neighbor : graphNode.getNeighbors()) {
-                try {
-                    graphService.getById(neighbor);
-                } catch (Exception e) {
-                    log.warn("Graph node add error: ", e);
+                Graph graph = graphService.getById(neighbor);
+                if (graph == null) {
                     return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(),
                             "Neighbor not found."), HttpStatus.BAD_REQUEST);
                 }
@@ -144,7 +142,6 @@ public class GraphController {
 
     @Data
     public static class GraphNodeInfo {
-        Long id;
         String value;
         String description;
         List<Long> neighbors;
