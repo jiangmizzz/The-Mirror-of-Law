@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -94,8 +95,7 @@ public class UserController {
             userService.save(user);
 
             log.info("User register success. Username: " + userRegister.getUsername());
-            return new ResponseEntity<>(new Response<>(true, null, HttpStatus.CREATED.value(),
-                    "Register success."), HttpStatus.CREATED);
+            return new ResponseEntity<>(new Response<>(true, null, 0, "Register success."), HttpStatus.CREATED);
         } catch (Exception e) {
             if (e.getMessage().contains("Duplicate entry")) {
                 String duplicate = e.getMessage().split("'")[3].split("\\.")[1];
@@ -121,7 +121,7 @@ public class UserController {
             @Schema(implementation = Response.class)))
     })
     @PostMapping("/login")
-    public ResponseEntity<Response<Void>> login(@RequestBody UserLogin userLogin) {
+    public ResponseEntity<Response<UserInfo>> login(@RequestBody UserLogin userLogin) {
         return new ResponseEntity<>(new Response<>(false, null, HttpStatus.MOVED_PERMANENTLY.value(), null),
                 HttpStatus.MOVED_PERMANENTLY);
     }
@@ -149,13 +149,9 @@ public class UserController {
         try {
             try {
                 User user = getCurrentUser(request, response);
-                UserInfo userInfo = new UserInfo();
-                userInfo.setId(user.getId());
-                userInfo.setUsername(user.getUsername());
-                userInfo.setEmail(user.getEmail());
+                UserInfo userInfo = new UserInfo(user.getId(), user.getUsername(), user.getEmail(), null);
                 // TODO: get history
-                return new ResponseEntity<>(new Response<>(true, userInfo, HttpStatus.OK.value(), null),
-                        HttpStatus.OK);
+                return new ResponseEntity<>(new Response<>(true, userInfo, 0, null), HttpStatus.OK);
             } catch (Exception e) {
                 log.error("Get user info failed: User not found." + e.getMessage());
                 return new ResponseEntity<>(new Response<>(false, null, HttpStatus.NOT_FOUND.value(),
@@ -236,8 +232,7 @@ public class UserController {
                 userService.updateById(user);
 
                 log.info("User modify success.");
-                return new ResponseEntity<>(new Response<>(true, null, HttpStatus.OK.value(), null),
-                        HttpStatus.OK);
+                return new ResponseEntity<>(new Response<>(true, null, 0, null), HttpStatus.OK);
             } catch (Exception e) {
                 log.error("User modify error: User not found." + e.getMessage());
                 return new ResponseEntity<>(new Response<>(false, null, HttpStatus.NOT_FOUND.value(),
@@ -292,8 +287,7 @@ public class UserController {
                 userService.updateById(user);
 
                 log.info("User modify success.");
-                return new ResponseEntity<>(new Response<>(true, null, HttpStatus.OK.value(), null),
-                        HttpStatus.OK);
+                return new ResponseEntity<>(new Response<>(true, null, 0, null), HttpStatus.OK);
             } catch (Exception e) {
                 log.error("User modify error: User not found." + e.getMessage());
                 return new ResponseEntity<>(new Response<>(false, null, HttpStatus.NOT_FOUND.value(),
@@ -327,8 +321,7 @@ public class UserController {
                 userService.removeById(user);
 
                 log.info("User delete success.");
-                return new ResponseEntity<>(new Response<>(true, null, HttpStatus.OK.value(), null),
-                        HttpStatus.OK);
+                return new ResponseEntity<>(new Response<>(true, null, 0, null), HttpStatus.OK);
             } catch (Exception e) {
                 log.error("User delete error: User not found." + e.getMessage());
                 return new ResponseEntity<>(new Response<>(false, null, HttpStatus.NOT_FOUND.value(),
@@ -354,6 +347,7 @@ public class UserController {
     }
 
     @Data
+    @AllArgsConstructor
     public static class UserInfo {
         private Long id;
         private String username;
