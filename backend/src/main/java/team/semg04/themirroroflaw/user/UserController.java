@@ -66,7 +66,7 @@ public class UserController {
             @Schema(implementation = Response.class)))
     })
     @PostMapping("/register")
-    public ResponseEntity<Response<String>> register(@RequestBody UserRegister userRegister) {
+    public ResponseEntity<Response<Void>> register(@RequestBody UserRegister userRegister) {
         try {
             if (!validateUsername(userRegister.getUserName())) {
                 log.error("User register error: Username not valid. Username: " + userRegister.getUserName());
