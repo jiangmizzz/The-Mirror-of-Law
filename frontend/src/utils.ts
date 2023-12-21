@@ -14,9 +14,13 @@ export async function getFetcher(key: string) {
 }
 //获取用户信息的专用GET接口（未登录不认为是Error）
 export async function getUserInfo(key: string): Promise<UserInfo | -1> {
-  const resp = (await fetch(prefix + key, { mode: "cors" }).then((res) =>
-    res.json()
-  )) as Response<UserInfo>;
+  const resp = (await fetch(prefix + key, {
+    headers: {
+      "Content-type": "application/json",
+    },
+    credentials: "include",
+    mode: "cors",
+  }).then((res) => res.json())) as Response<UserInfo>;
 
   if (!resp.success) {
     if (resp.errorCode == "401") {
@@ -39,6 +43,7 @@ export async function postFetcher(
   const resp = (await fetch(prefix + key, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     body: JSON.stringify(body.arg),
     mode: "cors",
   }).then((res) => res.json())) as Response<any>;
@@ -60,6 +65,7 @@ export async function putFetcher(
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body.arg),
+    credentials: "include",
     mode: "cors",
   }).then((res) => res.json())) as Response<any>;
 
@@ -74,6 +80,7 @@ export async function deleteFetcher(key: string) {
   const resp = (await fetch(prefix + key, {
     method: "DELETE",
     mode: "cors",
+    credentials: "include",
   }).then((res) => res.json())) as Response<any>;
 
   if (!resp.success) {

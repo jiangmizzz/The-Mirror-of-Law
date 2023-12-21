@@ -50,7 +50,7 @@ export default function LogPop(props: LogPopProps) {
       string,
       {
         email: string;
-        username: string;
+        userName: string;
         password: string;
       }
     >("/user/register", postFetcher);
@@ -100,7 +100,7 @@ export default function LogPop(props: LogPopProps) {
       //注册
       const registerRes = await registerTrigger({
         email: formValue.email,
-        username: formValue.username,
+        userName: formValue.username,
         password: formValue.password,
       });
       if (registerRes.success) {
