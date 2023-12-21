@@ -29,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import team.semg04.themirroroflaw.user.UserController;
 import team.semg04.themirroroflaw.user.service.UserService;
 import team.semg04.themirroroflaw.user.utils.AuthenticationFilter;
 import team.semg04.themirroroflaw.user.utils.HttpRequestFilter;
@@ -60,7 +61,7 @@ public class SpringSecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         AuthenticationFilter authenticationFilter = new AuthenticationFilter(userService, authenticationManager());
         authenticationFilter.setRememberMeServices(rememberMeServices());
-        authenticationFilter.setAuthenticationSuccessHandler(new SuccessHandler());
+        authenticationFilter.setAuthenticationSuccessHandler(new SuccessHandler(userService));
         authenticationFilter.setAuthenticationFailureHandler(new FailureHandler());
 
         ObjectMapper objectMapper = new ObjectMapper();
@@ -167,13 +168,26 @@ public class SpringSecurityConfig {
 
     public static class SuccessHandler implements AuthenticationSuccessHandler {
 
+        private final UserService userService;
+
+        public SuccessHandler(UserService userService) {
+            this.userService = userService;
+        }
+
         @Override
         public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
                                             Authentication authentication) throws IOException {
             response.setContentType("application/json;charset=UTF-8");
             response.setStatus(HttpServletResponse.SC_OK);
+
+            // get UserInfo
+            String id = authentication.getName();
+            team.semg04.themirroroflaw.user.entity.User user = userService.getById(id);
+            UserController.UserInfo userInfo = new UserController.UserInfo(user.getId(), user.getUsername(),
+                    user.getEmail(), null);
+
             PrintWriter out = response.getWriter();
-            Response<Void> ret = new Response<>(true, null, HttpStatus.OK.value(), null);
+            Response<UserController.UserInfo> ret = new Response<>(true, userInfo, 0, null);
             out.write(new ObjectMapper().writeValueAsString(ret));
             out.flush();
             out.close();
