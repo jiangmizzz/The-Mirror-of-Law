@@ -126,11 +126,17 @@ export default function ResultsPage() {
     data: resultsData,
     error: resultsError,
     isLoading: resultLoading,
-  } = useSWR<{ results: ResultItemProps[]; total: number }, Error>(() => {
-    //null, undefined, false, '' 均不会发起请求
-    if (paramsStr == null) return false;
-    return "/search/list?" + paramsStr;
-  }, getFetcher);
+  } = useSWR<{ results: ResultItemProps[]; total: number }, Error>(
+    () => {
+      //null, undefined, false, '' 均不会发起请求
+      if (paramsStr == null) return false;
+      return "/search/list?" + paramsStr;
+    },
+    getFetcher,
+    {
+      revalidateOnFocus: true, //聚焦时重新数据验证，保证数据实时性
+    }
+  );
 
   interface ResultItemProps {
     id: number; //唯一标识符

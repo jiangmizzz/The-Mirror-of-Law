@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect } from "react";
 import "./App.css";
 import "./assets/reset.css";
 import {
@@ -13,6 +13,7 @@ import {
   Dropdown,
   Divider,
   Tooltip,
+  message,
 } from "antd";
 import type { MenuProps } from "antd";
 import {
@@ -27,37 +28,60 @@ import { Link, Navigate, Route, Routes } from "react-router-dom";
 import SearchPage from "./pages/search/search";
 import ResultsPage from "./pages/results/results";
 import DetailPage from "./pages/detail/detail";
+import { useUserStore } from "./stores/userStore";
+import { useState } from "react";
+import LogPop from "./components/LogPop/LogPop";
+import useSWRMutation from "swr/mutation";
+import useSWR from "swr";
+import type { Response } from "./vite-env";
+import { getUserInfo, postFetcher } from "./utils";
 
 const { Header, Content, Footer } = Layout;
 const { Text } = Typography;
 const { useToken } = theme;
-const items: MenuProps["items"] = [
-  {
-    key: "1",
-    label: (
-      <Space align="center">
-        <UserOutlined />
-        <Text>个人中心</Text>
-      </Space>
-    ),
-  },
-  {
-    key: "2",
-    label: (
-      <Space align="center">
-        <SettingOutlined />
-        <Text>个人设置</Text>
-      </Space>
-    ),
-  },
-];
 
 const App: React.FC = () => {
-  const [ifLogin, setLogin] = useState<boolean>(false);
+  const [, contextHolder] = message.useMessage();
+  const userStore = useUserStore(); //全局用户状态管理器
+  const [ifPop, setIfPop] = useState<boolean>(false);
+  const [popType, setPopType] = useState<
+    "login" | "register" | "edit-info" | "edit-password"
+  >("login");
 
+  //获取用户信息，放在顶层，以避免子组件重新渲染触发多次请求
+  const { data: userData, isLoading: userLoading } = useSWR(
+    () => {
+      //只在未登录时请求获取数据
+      if (userStore.ifLogin) return false;
+      return "/user/info";
+    },
+    getUserInfo,
+    {
+      //不依赖缓存，防止每次获取的用户信息是同一个
+      revalidateOnMount: true,
+    }
+  );
+  //获取数据后进行更新
+  useEffect(() => {
+    if (!userLoading) {
+      //加载完成
+      if (userData == -1) {
+        //没有登录态
+        userStore.logout(); //其实这句没什么用
+      } else if (userData) {
+        userStore.login(
+          userData.id,
+          userData.userName,
+          userData.email,
+          userData.history
+        );
+      }
+    }
+  }, [userData]);
+
+  //子组件，用户信息栏
   function UserInfo() {
     const { token } = useToken();
-
     const contentStyle: React.CSSProperties = {
       backgroundColor: token.colorBgElevated,
       borderRadius: token.borderRadiusLG,
@@ -67,7 +91,62 @@ const App: React.FC = () => {
     const menuStyle: React.CSSProperties = {
       boxShadow: "none",
     };
-    if (!ifLogin) {
+    const items: MenuProps["items"] = [
+      {
+        key: "1",
+        label: (
+          <Space
+            align="center"
+            onClick={() => {
+              setIfPop(true);
+              setPopType("edit-info");
+            }}
+          >
+            <UserOutlined />
+            <Text>编辑信息</Text>
+          </Space>
+        ),
+      },
+      {
+        key: "2",
+        label: (
+          <Space
+            align="center"
+            onClick={() => {
+              setIfPop(true);
+              setPopType("edit-password");
+            }}
+          >
+            <SettingOutlined />
+            <Text>修改密码</Text>
+          </Space>
+        ),
+      },
+    ];
+
+    //用户登出的trigger
+    const { trigger: logoutTrigger } = useSWRMutation<
+      Response<null>,
+      Error,
+      string,
+      null
+    >("/user/logout", postFetcher);
+
+    //用户登出
+    const logout = async () => {
+      const logoutRes = await logoutTrigger(null);
+      if (logoutRes.success) {
+        //登出成功
+        userStore.logout();
+        message.success("退出登录成功!");
+      } else {
+        message.error(
+          "退出登录失败!" + logoutRes.errorCode + ": " + logoutRes.errorMessage
+        );
+      }
+    };
+
+    if (userStore.ifLogin) {
       return (
         <>
           <Space align="center" className="app-user">
@@ -93,6 +172,7 @@ const App: React.FC = () => {
                           paddingRight: 8,
                           border: "none",
                         }}
+                        onClick={logout}
                       >
                         退出登录
                       </Button>
@@ -110,9 +190,9 @@ const App: React.FC = () => {
                   size="large"
                   gap={2}
                 >
-                  {"UserName".charAt(0)}
+                  {userStore.userName.charAt(0)}
                 </Avatar>
-                <Text style={{ color: "#ffffff" }}>UserName</Text>
+                <Text style={{ color: "#ffffff" }}>{userStore.userName}</Text>
                 <DownOutlined style={{ color: "#ffffff" }} />
               </Space>
             </Dropdown>
@@ -123,8 +203,24 @@ const App: React.FC = () => {
       return (
         <>
           <Space className="app-user" size="middle">
-            <Button ghost>登录</Button>
-            <Button ghost>注册</Button>
+            <Button
+              ghost
+              onClick={() => {
+                setIfPop(true);
+                setPopType("login");
+              }}
+            >
+              登录
+            </Button>
+            <Button
+              ghost
+              onClick={() => {
+                setIfPop(true);
+                setPopType("register");
+              }}
+            >
+              注册
+            </Button>
           </Space>
         </>
       );
@@ -149,6 +245,8 @@ const App: React.FC = () => {
           },
         }}
       >
+        {contextHolder}
+        {ifPop && <LogPop type={popType} closePop={() => setIfPop(false)} />}
         <Layout style={{ minHeight: "100vh" }}>
           <Header
             style={{
