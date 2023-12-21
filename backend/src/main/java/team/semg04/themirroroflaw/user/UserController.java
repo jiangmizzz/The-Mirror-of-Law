@@ -68,8 +68,8 @@ public class UserController {
     @PostMapping("/register")
     public ResponseEntity<Response<String>> register(@RequestBody UserRegister userRegister) {
         try {
-            if (!validateUsername(userRegister.getUsername())) {
-                log.error("User register error: Username not valid. Username: " + userRegister.getUsername());
+            if (!validateUsername(userRegister.getUserName())) {
+                log.error("User register error: Username not valid. Username: " + userRegister.getUserName());
                 return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(),
                         "Username not valid."), HttpStatus.BAD_REQUEST);
             }
@@ -89,12 +89,12 @@ public class UserController {
             userRegister.password = passwordEncoder.encode(userRegister.password);
 
             User user = new User();
-            user.setUsername(userRegister.getUsername());
+            user.setUsername(userRegister.getUserName());
             user.setPassword(userRegister.getPassword());
             user.setEmail(userRegister.getEmail());
             userService.save(user);
 
-            log.info("User register success. Username: " + userRegister.getUsername());
+            log.info("User register success. Username: " + userRegister.getUserName());
             return new ResponseEntity<>(new Response<>(true, null, 0, "Register success."), HttpStatus.CREATED);
         } catch (Exception e) {
             if (e.getMessage().contains("Duplicate entry")) {
@@ -200,8 +200,8 @@ public class UserController {
                 User user = getCurrentUser(request, response);
 
                 // validate username and email
-                if (!validateUsername(userModify.getUsername())) {
-                    log.error("User modify error: Username not valid. Username: " + userModify.getUsername());
+                if (!validateUsername(userModify.getUserName())) {
+                    log.error("User modify error: Username not valid. Username: " + userModify.getUserName());
                     return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(),
                             "Username not valid."), HttpStatus.BAD_REQUEST);
                 }
@@ -213,10 +213,10 @@ public class UserController {
 
 
                 // check if username or email already exists
-                User userWithSameUsername = userService.getByUsername(userModify.getUsername());
+                User userWithSameUsername = userService.getByUsername(userModify.getUserName());
                 User userWithSameEmail = userService.getByEmail(userModify.getEmail());
                 if (userWithSameUsername != null && !userWithSameUsername.getId().equals(user.getId())) {
-                    log.error("User modify error: Username already exists. Username: " + userModify.getUsername());
+                    log.error("User modify error: Username already exists. Username: " + userModify.getUserName());
                     return new ResponseEntity<>(new Response<>(false, null, HttpStatus.CONFLICT.value(),
                             "Username already exists."), HttpStatus.CONFLICT);
                 }
@@ -227,7 +227,7 @@ public class UserController {
                 }
 
                 // update user info
-                user.setUsername(userModify.getUsername());
+                user.setUsername(userModify.getUserName());
                 user.setEmail(userModify.getEmail());
                 userService.updateById(user);
 
@@ -342,7 +342,7 @@ public class UserController {
 
     @Data
     public static class UserModify {
-        private String username;
+        private String userName;
         private String email;
     }
 
@@ -350,14 +350,14 @@ public class UserController {
     @AllArgsConstructor
     public static class UserInfo {
         private Long id;
-        private String username;
+        private String userName;
         private String email;
         private String[] history;
     }
 
     @Data
     public static class UserRegister {
-        private String username;
+        private String userName;
         private String password;
         private String email;
     }
