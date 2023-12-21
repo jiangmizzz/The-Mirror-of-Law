@@ -190,7 +190,7 @@ const App: React.FC = () => {
                   size="large"
                   gap={2}
                 >
-                  {userStore.userName.charAt(0)}
+                  {userStore.userName.charAt(0).toUpperCase()}
                 </Avatar>
                 <Text style={{ color: "#ffffff" }}>{userStore.userName}</Text>
                 <DownOutlined style={{ color: "#ffffff" }} />
