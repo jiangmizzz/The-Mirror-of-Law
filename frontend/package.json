@@ -12,6 +12,7 @@
   "dependencies": {
     "@ant-design/charts": "^1.4.3",
     "@ant-design/pro-components": "^2.6.43",
+    "@mojs/core": "^1.7.1",
     "antd": "^5.11.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
