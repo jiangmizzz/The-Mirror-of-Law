@@ -148,6 +148,7 @@ public class SparkModelConnector extends WebSocketListener {
             System.out.println("发生错误，错误码为：" + myJsonParse.header.code);
             System.out.println("本次请求的sid为：" + myJsonParse.header.sid);
             webSocket.close(1000, "");
+            totalFlag = true;
         }
         List<Text> textList = myJsonParse.payload.choices.text;
         for (Text temp : textList) {

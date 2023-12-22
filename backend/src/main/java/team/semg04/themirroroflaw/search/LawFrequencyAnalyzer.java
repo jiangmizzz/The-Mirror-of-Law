@@ -12,7 +12,7 @@ public class LawFrequencyAnalyzer {
 
     public static List<Map<String, Object>> getAnalyzedJson(String text) {
         final FrequencyAnalyzer frequencyAnalyzer = new FrequencyAnalyzer();
-        frequencyAnalyzer.setWordFrequenciesToReturn(600);
+        frequencyAnalyzer.setWordFrequenciesToReturn(100);
         frequencyAnalyzer.setMinWordLength(2);
         frequencyAnalyzer.setWordTokenizer(new ChineseWordTokenizer());
         List<WordFrequency> wordFrequencies = frequencyAnalyzer.load(List.of(text));
