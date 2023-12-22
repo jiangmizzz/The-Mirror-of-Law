@@ -12,10 +12,11 @@ import "./ThumbButtons.css";
 import FavoriteButton from "./favorite";
 import useSWRMutation from "swr";
 import { postFetcher } from "../../../utils.ts";
+import type { Response } from "../../../vite-env";
 
 // Props 接口
 interface ThumbButtonsProps {
-  id: string; // 从父组件传递的文档id
+  id: number; // 从父组件传递的文档id
   initialLikes: number;
   initialDislikes: number;
 }
@@ -38,7 +39,7 @@ const ThumbButtons: React.FC<ThumbButtonsProps> = ({
   };
 
   const { trigger, isMutating } = useSWRMutation<
-    null, // 返回数据类型
+    Response<null>, // 返回数据类型
     Error, // 错误类型
     string, //key类型
     //any

@@ -23,6 +23,8 @@ import { useNavigate } from "react-router-dom";
 import type { SearchProps } from "../../vite-env";
 import TextArea from "antd/es/input/TextArea";
 import AI_avatar from "../../assets/iconSideChatDoc.png";
+import useSWR from "swr";
+import { getFetcher } from "../../utils.ts";
 
 const { RangePicker } = DatePicker;
 
@@ -79,6 +81,38 @@ export default function SearchBox(props: {
   useEffect(() => {
     setInputValueAI("");
   }, [chatMessages]);
+
+  // AI 部分
+  interface AiExtractResponse {
+    res: string;
+  }
+  // 使用 useSWR 发送请求
+  console.log("Input value:" + input);
+  const { data: AIdata, error: AIerror } = useSWR<AiExtractResponse>(
+    `/ai/extract?input=${input}`,
+    getFetcher
+    // {
+    //   refreshInterval: 1000,
+    // }
+  );
+
+  console.log("AI extract result:" + AIdata);
+
+  // 当获取 AI 摘要成功时，更新 chatMessages
+  useEffect(() => {
+    if (AIdata) {
+      setChatMessages((prevMessages) => [
+        ...prevMessages,
+        { content: AIdata.toString(), type: "ai" },
+      ]);
+    }
+  }, [AIdata]);
+
+  // 当获取 AI 摘要失败时，显示错误信息
+  if (AIerror) {
+    console.error("Failed to fetch AI summary:", AIerror);
+    message.error("获取 AI 摘要失败！");
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputValueAI(e.target.value);
