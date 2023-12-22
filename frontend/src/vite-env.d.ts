@@ -20,3 +20,9 @@ export interface UserInfo {
   email: string; //用户的注册邮箱
   history: string[]; //最近20条搜索记录（输入值）
 }
+//图谱节点信息
+export interface NodeInfo {
+  id: string; //节点的唯一标识符
+  value: string; //节点值（显示出来的）
+  children?: NodeInfo[]; //连接的下一层子节点
+}
