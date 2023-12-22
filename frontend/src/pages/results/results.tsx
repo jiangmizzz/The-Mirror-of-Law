@@ -1,29 +1,21 @@
-import {
-  Divider,
-  Space,
-  Tooltip,
-  Button,
-  Pagination,
-  Card,
-  Typography,
-} from "antd";
-import { LikeOutlined, DislikeOutlined, MoreOutlined } from "@ant-design/icons";
+import { Divider, Space, Tooltip, Button, Pagination } from "antd";
+import { LikeOutlined, DislikeOutlined } from "@ant-design/icons";
 import "./results.css";
 import { useEffect, useState } from "react";
 import SearchBox from "../../components/SearchBox/SearchBox";
-import { RadialTreeGraph } from "@ant-design/graphs";
+// import { RadialTreeGraph } from "@ant-design/graphs";
 import rule from "../../assets/rule.svg";
 import judge from "../../assets/judge.svg";
 import article from "../../assets/article.svg";
 import idea from "../../assets/idea.svg";
 import information from "../../assets/infomation.svg";
+import KnowledgeMap from "./component/KnowledgeMap";
 import { useLocation, useNavigate } from "react-router-dom";
 import logo from "../../assets/main-logo.svg";
 import type { SearchProps } from "../../vite-env";
 import { getFetcher } from "../../utils";
 import useSWR from "swr";
 
-const { Title } = Typography;
 export default function ResultsPage() {
   const location = useLocation(); //在react router v6 中模拟页面栈
   const navigate = useNavigate();
@@ -40,23 +32,10 @@ export default function ResultsPage() {
     value: string; //节点值（显示出来的）
     children?: NodeInfo[]; //连接的下一层子节点
   }
-  const centerNode: { center: NodeInfo; desc: string } = {
-    center: {
-      id: "1",
-      value: "民法典",
-      children: [
-        {
-          id: "2",
-          value: "Python",
-        },
-        {
-          id: "3",
-          value: "C++",
-        },
-      ],
-    },
-    desc: "Oracle Java 是广受欢迎的编程语言和开发平台。它有助于企业降低成本、缩短开发周期、推动创新以及改善应用服务。如今，Java 仍是企业和开发人员的首选开发平台...",
-  };
+  //知识图谱请求参数
+  const [mapParams, setMapParams] = useState<string | null>(null);
+  const [mapDepth, setMapDepth] = useState(2); //初始图谱深度
+  //搜索框组件的传入参数
   const [searchProps, setSearchProps] = useState<SearchProps>({
     input: "",
     searchType: 0,
@@ -67,7 +46,7 @@ export default function ResultsPage() {
   //根据路由参数重新请求搜索结果
   function reSearch() {
     const params = new URLSearchParams(location.search);
-    console.log(params.toString());
+    // console.log(params.toString());
     const extraParams: Record<string, string | string[]> = {};
     const types: string[] = [];
     if (params.get("resultTypes")) {
@@ -103,6 +82,12 @@ export default function ResultsPage() {
     };
     // console.log(new URLSearchParams(requestParams).toString());
     setParamsStr(new URLSearchParams(requestParams).toString());
+    setMapParams(
+      new URLSearchParams({
+        input: requestParams.input,
+        depth: String(mapDepth),
+      }).toString()
+    );
     //注意：搜索结果的请求参数均不在这一页直接维护，而是通过路由值获取
   }
 
@@ -121,7 +106,7 @@ export default function ResultsPage() {
     reSearch();
   }, [currentPage]);
 
-  //请求函数，注意要写在最外层
+  //请求搜索结果的函数，注意要写在最外层
   const {
     data: resultsData,
     error: resultsError,
@@ -137,6 +122,21 @@ export default function ResultsPage() {
       revalidateOnFocus: true, //聚焦时重新数据验证，保证数据实时性
     }
   );
+  //请求知识图谱数据
+  const {
+    data: centerNode,
+    error: mapError,
+    isLoading: mapLoading,
+  } = useSWR<{ center: NodeInfo; desc: string }, Error>(() => {
+    //null, undefined, false, '' 均不会发起请求
+    if (mapParams == null) return false;
+    return "/graph/get?" + mapParams;
+  }, getFetcher);
+
+  //使用图谱节点的文本重新搜索
+  function nodeSearch(text: string) {
+    navigate(`/results?input=${text}&searchType=0`);
+  }
 
   interface ResultItemProps {
     id: number; //唯一标识符
@@ -150,6 +150,7 @@ export default function ResultsPage() {
       dislikes: number; //点踩数量
     };
   }
+
   //子组件，单条搜索结果
   function ResultItem(props: ResultItemProps) {
     const icon: { img: string; text: string } = (() => {
@@ -226,177 +227,6 @@ export default function ResultsPage() {
       </>
     );
   }
-  //子组件，知识图谱
-  function KnowledgeMap() {
-    const data = {
-      id: "Modeling Methods",
-      children: [
-        {
-          id: "Classification",
-          children: [
-            { id: "Logistic regression", value: "Logistic regression" },
-            {
-              id: "Linear discriminant analysis",
-              value: "Linear discriminant analysis",
-            },
-            { id: "Rules", value: "Rules" },
-            { id: "Decision trees", value: "Decision trees" },
-            { id: "Naive Bayes", value: "Naive Bayes" },
-            { id: "K nearest neighbor", value: "K nearest neighbor" },
-            {
-              id: "Probabilistic neural network",
-              value: "Probabilistic neural network",
-            },
-            { id: "Support vector machine", value: "Support vector machine" },
-          ],
-          value: "Classification",
-        },
-        {
-          id: "Consensus",
-          children: [
-            {
-              id: "Models diversity",
-              children: [
-                {
-                  id: "Different initializations",
-                  value: "Different initializations",
-                },
-                {
-                  id: "Different parameter choices",
-                  value: "Different parameter choices",
-                },
-                {
-                  id: "Different architectures",
-                  value: "Different architectures",
-                },
-                {
-                  id: "Different modeling methods",
-                  value: "Different modeling methods",
-                },
-                {
-                  id: "Different training sets",
-                  value: "Different training sets",
-                },
-                {
-                  id: "Different feature sets",
-                  value: "Different feature sets",
-                },
-              ],
-              value: "Models diversity",
-            },
-            {
-              id: "Methods",
-              children: [
-                { id: "Classifier selection", value: "Classifier selection" },
-                { id: "Classifier fusion", value: "Classifier fusion" },
-              ],
-              value: "Methods",
-            },
-            {
-              id: "Common",
-              children: [
-                { id: "Bagging", value: "Bagging" },
-                { id: "Boosting", value: "Boosting" },
-                { id: "AdaBoost", value: "AdaBoost" },
-              ],
-              value: "Common",
-            },
-          ],
-          value: "Consensus",
-        },
-        {
-          id: "Regression",
-          children: [
-            {
-              id: "Multiple linear regression",
-              value: "Multiple linear regression",
-            },
-            { id: "Partial least squares", value: "Partial least squares" },
-            {
-              id: "Multi-layer feedforward neural network",
-              value: "Multi-layer feedforward neural network",
-            },
-            {
-              id: "General regression neural network",
-              value: "General regression neural network",
-            },
-            {
-              id: "Support vector regression",
-              value: "Support vector regression",
-            },
-          ],
-          value: "Regression",
-        },
-      ],
-      value: "Modeling Methods",
-    };
-    const themeColor = "#73B3D1";
-    const config = {
-      //TODO:设置合适的宽高
-      // width: 500,
-      // height: 500,
-      data,
-      nodeCfg: {
-        size: 30,
-        type: "circle",
-        label: {
-          style: {
-            fill: "#fff",
-          },
-        },
-        style: {
-          fill: themeColor,
-          stroke: "#0E1155",
-          lineWidth: 2,
-          strokeOpacity: 0.45,
-          shadowColor: themeColor,
-          shadowBlur: 25,
-        },
-        nodeStateStyles: {
-          hover: {
-            stroke: themeColor,
-            lineWidth: 2,
-            strokeOpacity: 1,
-          },
-        },
-      },
-      edgeCfg: {
-        style: {
-          stroke: themeColor,
-          shadowColor: themeColor,
-          shadowBlur: 20,
-        },
-        endArrow: {
-          type: "triangle",
-          fill: themeColor,
-          d: 15,
-          size: 8,
-        },
-        edgeStateStyles: {
-          hover: {
-            stroke: themeColor,
-            lineWidth: 2,
-          },
-        },
-      },
-      behaviors: ["drag-canvas", "zoom-canvas", "drag-node"],
-    };
-
-    return (
-      <div
-        id="dom"
-        style={{
-          background: "#0E1155",
-          height: "400px",
-        }}
-      >
-        {
-          //@ts-ignore
-          <RadialTreeGraph {...config} />
-        }
-      </div>
-    );
-  }
   return (
     <>
       {resultsError && <div>Error:{resultsError.message}</div>}
@@ -445,25 +275,27 @@ export default function ResultsPage() {
                 </div>
               </div>
               <div className="result-body-right">
-                <Card /*loading={true}*/>
-                  <Space className="result-body-right-head">
-                    <Title level={3}>{centerNode.center.value}</Title>
-                    <Tooltip
-                      title="知识图谱：自动寻找与搜索内容最贴近的词条节点"
-                      overlayStyle={{ fontSize: "12px" }}
-                    >
-                      <MoreOutlined
-                        style={{
-                          fontSize: "1.4em",
-                          color: "rgba(0, 0, 0, 0.7)",
-                        }}
-                      />
-                    </Tooltip>
-                  </Space>
-                  <Divider style={{ margin: "1em 0" }}></Divider>
-                  <div>{centerNode.desc}</div>
-                  {<KnowledgeMap />}
-                </Card>
+                {mapError && <div>error</div>}
+                {mapLoading && <div>loading...</div>}
+                {!mapError && !mapLoading && (
+                  <KnowledgeMap
+                    center={
+                      centerNode ? centerNode.center : { id: "", value: "" }
+                    }
+                    desc={centerNode ? centerNode.desc : ""}
+                    addDepth={() =>
+                      setMapDepth(() => {
+                        return mapDepth + 1;
+                      })
+                    }
+                    decDepth={() =>
+                      setMapDepth(() => {
+                        return mapDepth - 1;
+                      })
+                    }
+                    searchByNode={nodeSearch}
+                  />
+                )}
               </div>
             </div>
           </div>
