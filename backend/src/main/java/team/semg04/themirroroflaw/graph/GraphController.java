@@ -1,5 +1,6 @@
 package team.semg04.themirroroflaw.graph;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -85,7 +86,7 @@ public class GraphController {
                         "found."), HttpStatus.NOT_FOUND);
             }
 
-            ResponseNodeInfo center = new ResponseNodeInfo(graph.getId(), graph.getValue(), null);
+            ResponseNodeInfo center = new ResponseNodeInfo(graph.getId().toString(), graph.getValue(), null);
             ResponseGraph responseGraph = new ResponseGraph(center, graph.getDescription());
             Set<Long> visited = new HashSet<>();
 
@@ -93,7 +94,7 @@ public class GraphController {
             Queue<ResponseNodeInfo> curQueue = new LinkedList<>();
             Queue<ResponseNodeInfo> nextQueue = new LinkedList<>();
             curQueue.add(center);
-            visited.add(center.getId());
+            visited.add(graph.getId());
             for (int i = 0; i < depth; i++) {
                 while (!curQueue.isEmpty()) {
                     ResponseNodeInfo curNode = curQueue.poll();
@@ -104,7 +105,7 @@ public class GraphController {
                         if (!visited.contains(neighbor)) {
                             visited.add(neighbor);
                             Graph neighborNode = graphService.getById(neighbor);
-                            ResponseNodeInfo child = new ResponseNodeInfo(neighborNode.getId(),
+                            ResponseNodeInfo child = new ResponseNodeInfo(neighborNode.getId().toString(),
                                     neighborNode.getValue(), null);
                             children.add(child);
                             nextQueue.add(child);
@@ -128,8 +129,9 @@ public class GraphController {
     @Data
     @AllArgsConstructor
     public static class ResponseNodeInfo {
-        Long id;
+        String id;
         String value;
+        @JsonInclude(JsonInclude.Include.NON_NULL)
         List<ResponseNodeInfo> children;
     }
 
