@@ -34,6 +34,7 @@ const { TextArea } = Input;
 import AI_avatar from "../../assets/iconSideChatDoc.png";
 import WordCloudComponent from "./component/WordCloud.tsx";
 import FireworksComponent from "./component/FireworksComponent.tsx"; // 引入新的子组件
+import { useUserStore } from "../../stores/userStore.tsx";
 
 // TODO， 没有相应接口，mock数据
 async function getAiResponse(userMessage: string): Promise<string> {
@@ -45,13 +46,14 @@ async function getAiResponse(userMessage: string): Promise<string> {
 }
 
 const DetailPage: React.FC = () => {
-  const { id } = useParams(); // 根据url来获取params
+  const { id, type } = useParams(); // 根据url来获取params
   //   const [data, setData] = useState<any>({}); // 初始化为空对象
   const [inputValue, setInputValue] = useState(""); // AI chatbot textarea中的文本（用户输入的信息）
   const [messageApi, contextHolder] = message.useMessage(); // 全局提示
   const [ifOpen, setOpen] = useState<boolean>(false); // 是否启用AI辅助功能（打开抽屉）
   const [isOpenFloatTooltip, setIsOpenFloatTooltip] = useState(true);
   const [isFireworksOn, setIsFireworksOn] = useState(true); // 是否开启快乐特效（鼠标点击动效）
+  const userStore = useUserStore(); //全局用户状态管理器
 
   const [detailData, setDetailData] = useState<DetailData | null>(null); // 在 DetailPage 组件中定义一个状态变量用于存储详情数据
   const navigate = useNavigate();
@@ -60,9 +62,6 @@ const DetailPage: React.FC = () => {
   interface AiSummaryResponse {
     res: string;
   }
-
-  // TODO（协商AI请求类型）
-  const someType = 0;
 
   // 聊天消息的状态
   const [chatMessages, setChatMessages] = useState([
@@ -84,12 +83,13 @@ const DetailPage: React.FC = () => {
   const [isGetResponse, setIsGetResponse] = useState(false);
 
   // 使用 useSWR 发送请求
-  const { data: AIdata, error: AIerror } = useSWR<AiSummaryResponse>(
-    fetchAiData && !isGetResponse
-      ? `/ai/summarize?id=${id}&type=${someType}`
-      : null,
-    getFetcher
-  );
+  const { data: AIdata, error: AIerror } = useSWR<AiSummaryResponse>(() => {
+    if (!fetchAiData || isGetResponse) {
+      // 设置条件防止发送多次请求
+      return false;
+    }
+    return "/ai/summarize?id=" + id + "&type=" + type;
+  }, getFetcher);
   console.log("AI summary result:" + AIdata);
 
   // 当获取 AI 摘要成功时，更新 chatMessages
@@ -289,7 +289,7 @@ const DetailPage: React.FC = () => {
           <Card>
             {
               <div className="world-cloud">
-                <WordCloudComponent />
+                <WordCloudComponent id={id} type={type} />
               </div>
             }
           </Card>

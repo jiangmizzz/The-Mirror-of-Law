@@ -269,7 +269,7 @@ export default function ResultsPage() {
                 className="result-item-body-title"
                 style={{ margin: 0 }}
                 onClick={() =>
-                  navigate(`/detail/${props.id}`, {
+                  navigate(`/detail/${props.id}/${props.resultType}`, {
                     state: { previousLocation: location.pathname },
                   })
                 }
