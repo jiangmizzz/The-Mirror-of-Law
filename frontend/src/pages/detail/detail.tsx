@@ -52,6 +52,8 @@ const DetailPage: React.FC = () => {
   const [ifOpen, setOpen] = useState<boolean>(false); // 是否启用AI辅助功能（打开抽屉）
   const [isOpenFloatTooltip, setIsOpenFloatTooltip] = useState(true);
   const [isFireworksOn, setIsFireworksOn] = useState(true); // 是否开启快乐特效（鼠标点击动效）
+
+  const [detailData, setDetailData] = useState<DetailData | null>(null); // 在 DetailPage 组件中定义一个状态变量用于存储详情数据
   const navigate = useNavigate();
 
   // AI部分
@@ -190,11 +192,15 @@ const DetailPage: React.FC = () => {
     resultType: number;
     link: string;
   }
-  // 调用SWR hook来获取详情页的数据
-  const { data, error, isLoading } = useSWR<DetailData>(
-    `/search/detail?id=${id}`,
-    getFetcher
-  );
+
+  const [isGetDetail, setIsGetDetail] = useState(false);
+  // 调用SWR hook来获取详情页的数据 （判断请求条件）
+  const { data, error, isLoading } = useSWR<DetailData>(() => {
+    if (isGetDetail) {
+      return false;
+    }
+    return "/search/detail?id=" + id;
+  }, getFetcher);
 
   // 显示正在加载的message
   const showLoading = () => {
@@ -208,10 +214,20 @@ const DetailPage: React.FC = () => {
   };
 
   // 如果有错误，显示错误信息
-  if (error) {
-    console.error("Failed to fetch data:", error);
-    message.error("加载失败！");
-  }
+  useEffect(() => {
+    if (error) {
+      console.error("Failed to fetch data:", error);
+      message.error("加载失败！");
+    }
+  }, [error]);
+
+  // 当获取 详情信息 成功时，更新 isGetDetail 和 detailData
+  useEffect(() => {
+    if (data) {
+      setIsGetDetail(true);
+      setDetailData(data); // 更新详情数据
+    }
+  }, [data]);
 
   // 在加载状态下显示 loading 界面
   if (isLoading) {
@@ -240,7 +256,7 @@ const DetailPage: React.FC = () => {
     );
   }
 
-  if (!data) {
+  if (!detailData) {
     return (
       <div className="skeleton-box">
         <Card
@@ -259,9 +275,9 @@ const DetailPage: React.FC = () => {
     );
   }
 
-  const { title, source, publishTime, feedbackCnt, content, link } = data;
+  const { title, source, publishTime, feedbackCnt, content, link } = detailData;
   // 显示调试信息
-  console.log(data);
+  console.log(detailData);
 
   // 正常显示页面
   return (
@@ -269,25 +285,29 @@ const DetailPage: React.FC = () => {
       {/* 鼠标点击动效组件 */}
       <FireworksComponent isOpen={isFireworksOn} />
       <div className="left-box">
-        <Card>
-          {
-            <div className="world-cloud">
-              <WordCloudComponent />
-            </div>
-          }
-        </Card>
-        <Card style={{ marginTop: "20px" }}>
-          {
-            <div className="feedback-box">
-              <Typography.Title level={5}>您对这篇文档的评价</Typography.Title>
-              <ThumbButtons
-                id={id ?? -1} // 如果 id 是 undefined，则使用空字符串(TODO)
-                initialLikes={feedbackCnt.likes}
-                initialDislikes={feedbackCnt.dislikes}
-              />
-            </div>
-          }
-        </Card>
+        <div className="left-sticky-box">
+          <Card>
+            {
+              <div className="world-cloud">
+                <WordCloudComponent />
+              </div>
+            }
+          </Card>
+          <Card style={{ marginTop: "20px" }}>
+            {
+              <div className="feedback-box">
+                <Typography.Title level={5}>
+                  您对这篇文档的评价
+                </Typography.Title>
+                <ThumbButtons
+                  id={id ?? -1} // 如果 id 是 undefined，则使用空字符串(TODO)
+                  initialLikes={feedbackCnt.likes}
+                  initialDislikes={feedbackCnt.dislikes}
+                />
+              </div>
+            }
+          </Card>
+        </div>
       </div>
       <div className="right-box">
         {contextHolder}
@@ -326,7 +346,7 @@ const DetailPage: React.FC = () => {
                 </div>
                 <Space>
                   <BulbTwoTone twoToneColor="#7464FA" />
-                  <a href={data.link} target="_blank" rel="noopener noreferrer">
+                  <a href={link} target="_blank" rel="noopener noreferrer">
                     查看原文
                   </a>
                 </Space>
