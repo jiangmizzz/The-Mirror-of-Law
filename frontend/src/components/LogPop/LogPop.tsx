@@ -231,6 +231,22 @@ export default function LogPop(props: LogPopProps) {
                     required: true,
                     message: "请输入用户名!",
                   },
+                  {
+                    validator(_, value, callback) {
+                      const regExp = /^[a-zA-Z0-9_-]{5,20}$/;
+                      if (
+                        popType == "register" &&
+                        value != "" &&
+                        !regExp.test(value)
+                      ) {
+                        callback(
+                          "用户名不合法(长度在5-20位, 只能包含大小写字母、数字、下划线和减号)"
+                        );
+                      } else {
+                        callback();
+                      }
+                    },
+                  },
                 ]}
               />
             )}
@@ -245,6 +261,22 @@ export default function LogPop(props: LogPopProps) {
                 {
                   required: true,
                   message: "请输入密码！",
+                },
+                {
+                  validator(_, value, callback) {
+                    const regExp = /^[a-zA-Z0-9_-]{5,20}$/;
+                    if (
+                      popType == "register" &&
+                      value != "" &&
+                      !regExp.test(value)
+                    ) {
+                      callback(
+                        "密码不合法(长度在5-20位, 只能包含大小写字母、数字、下划线和减号)"
+                      );
+                    } else {
+                      callback();
+                    }
+                  },
                 },
               ]}
             />
