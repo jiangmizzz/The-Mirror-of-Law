@@ -1,4 +1,4 @@
-import { Divider, Space, Tooltip, Button, Pagination } from "antd";
+import { Divider, Space, Tooltip, Button, Pagination, message } from "antd";
 import { LikeOutlined, DislikeOutlined } from "@ant-design/icons";
 import "./results.css";
 import { useEffect, useState } from "react";
@@ -33,7 +33,10 @@ export default function ResultsPage() {
     children?: NodeInfo[]; //连接的下一层子节点
   }
   //知识图谱请求参数
-  const [mapParams, setMapParams] = useState<string | null>(null);
+  const [mapParams, setMapParams] = useState<{
+    input: string;
+    depth: string;
+  } | null>(null);
   const [mapDepth, setMapDepth] = useState(2); //初始图谱深度
   //搜索框组件的传入参数
   const [searchProps, setSearchProps] = useState<SearchProps>({
@@ -82,12 +85,10 @@ export default function ResultsPage() {
     };
     // console.log(new URLSearchParams(requestParams).toString());
     setParamsStr(new URLSearchParams(requestParams).toString());
-    setMapParams(
-      new URLSearchParams({
-        input: requestParams.input,
-        depth: String(mapDepth),
-      }).toString()
-    );
+    setMapParams({
+      input: requestParams.input,
+      depth: String(mapDepth),
+    });
     //注意：搜索结果的请求参数均不在这一页直接维护，而是通过路由值获取
   }
 
@@ -122,6 +123,15 @@ export default function ResultsPage() {
       revalidateOnFocus: true, //聚焦时重新数据验证，保证数据实时性
     }
   );
+  //图谱深度更改时重新获取图谱
+  useEffect(() => {
+    if (mapParams) {
+      setMapParams({
+        input: mapParams.input,
+        depth: String(mapDepth),
+      });
+    }
+  }, [mapDepth]);
   //请求知识图谱数据
   const {
     data: centerNode,
@@ -130,12 +140,47 @@ export default function ResultsPage() {
   } = useSWR<{ center: NodeInfo; desc: string }, Error>(() => {
     //null, undefined, false, '' 均不会发起请求
     if (mapParams == null) return false;
-    return "/graph/get?" + mapParams;
+    return "/graph/get?" + new URLSearchParams(mapParams).toString();
   }, getFetcher);
 
   //使用图谱节点的文本重新搜索
   function nodeSearch(text: string) {
-    navigate(`/results?input=${text}&searchType=0`);
+    if (text == "") {
+      message.info("搜索内容不能为空！");
+    } else {
+      navigate(`/results?input=${text}&searchType=0`);
+    }
+  }
+  //转换图谱中心节点
+  function changeCenter(text: string) {
+    if (mapParams) {
+      if (text == "") {
+        message.error("节点值为空，无法更改当前节点为中心节点！");
+      } else {
+        setMapDepth(2);
+        setMapParams(() => {
+          return { input: text, depth: "2" };
+          //更改节点后深度恢复为2
+        });
+      }
+    }
+  }
+  //处理图谱搜索深度更改
+  function handleDepthChange(change: 1 | -1) {
+    if (change == -1) {
+      //收缩节点
+      if (mapDepth == 1) {
+        message.info("最少需保留一层子节点！");
+      } else {
+        setMapDepth(() => {
+          return mapDepth - 1;
+        });
+      }
+    } else {
+      setMapDepth(() => {
+        return mapDepth + 1;
+      });
+    }
   }
 
   interface ResultItemProps {
@@ -283,17 +328,9 @@ export default function ResultsPage() {
                       centerNode ? centerNode.center : { id: "", value: "" }
                     }
                     desc={centerNode ? centerNode.desc : ""}
-                    addDepth={() =>
-                      setMapDepth(() => {
-                        return mapDepth + 1;
-                      })
-                    }
-                    decDepth={() =>
-                      setMapDepth(() => {
-                        return mapDepth - 1;
-                      })
-                    }
+                    changeDepth={handleDepthChange}
                     searchByNode={nodeSearch}
+                    changeCenter={changeCenter}
                   />
                 )}
               </div>
