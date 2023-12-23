@@ -1,19 +1,21 @@
-import { Card, Divider, Space, Tooltip, Typography } from "antd";
+import { Button, Card, Divider, Space, Tooltip, Typography } from "antd";
 import type { NodeInfo } from "../../../vite-env";
 import { RadialTreeGraph } from "@ant-design/graphs";
 import {
   MoreOutlined,
   FullscreenExitOutlined,
   FullscreenOutlined,
+  PlusOutlined,
+  MinusOutlined,
 } from "@ant-design/icons";
 import "./KnowledgeMap.css";
 
 interface KnowledgeMapProps {
   center: NodeInfo; //中心词条
   desc: string; //对中心词条的描述
-  addDepth: () => void; //增加深度
-  decDepth: () => void; //减少深度
+  changeDepth: (change: -1 | 1) => void; //更改深度
   searchByNode: (text: string) => void; //使用节点值重新请求
+  changeCenter: (text: string) => void; //转换中心节点
 }
 const { Title } = Typography;
 export default function KnowledgeMap(props: KnowledgeMapProps) {
@@ -92,6 +94,8 @@ export default function KnowledgeMap(props: KnowledgeMapProps) {
     },
     behaviors: ["drag-canvas", "zoom-canvas", "drag-node"],
   };
+  let startTime = 0;
+  let endTime = 0;
 
   return (
     <Card /*loading={true}*/>
@@ -112,7 +116,6 @@ export default function KnowledgeMap(props: KnowledgeMapProps) {
       <Divider style={{ margin: "1em 0" }}></Divider>
       <div>{props.desc}</div>
       <div
-        id="dom"
         style={{
           //   background: "#0E1155",
           marginTop: "1em",
@@ -124,9 +127,61 @@ export default function KnowledgeMap(props: KnowledgeMapProps) {
           <RadialTreeGraph
             style={{ backgroundColor: "#f5f5f5", borderRadius: "5px" }}
             {...config}
+            onReady={(graph) => {
+              graph.on("node:mousedown", () => {
+                startTime = new Date().getTime();
+              });
+              graph.on("node:mouseup", (evt) => {
+                endTime = new Date().getTime();
+                const timeOffset: number = endTime - startTime;
+                if (timeOffset > 1000) {
+                  //长按，触发节点搜索
+                  console.log("offset:", timeOffset);
+                  props.searchByNode(
+                    evt.item?.getModel().label?.toString() ?? ""
+                  );
+                } else {
+                  console.log("offset:", timeOffset);
+                  //短按，更换中心节点
+                  props.changeCenter(
+                    evt.item?.getModel().label?.toString() ?? ""
+                  );
+                }
+                startTime = new Date().getTime();
+              });
+            }}
           />
         }
       </div>
+      <Space direction="vertical" className="KnowledgeMap-tips">
+        <div className="KnowledgeMap-tips-title">Tips: </div>
+        <Space className="KnowledgeMap-head">
+          <div className="KnowledgeMap-tips-text">
+            <div>长按节点 - 直接搜索节点文字</div>
+            <div>短按节点 - 切换图谱中心节点</div>
+          </div>
+          <Space>
+            <Tooltip title="向外辐射" overlayStyle={{ fontSize: "12px" }}>
+              <Button
+                size="small"
+                type="primary"
+                shape="circle"
+                icon={<PlusOutlined />}
+                onClick={() => props.changeDepth(1)}
+              />
+            </Tooltip>
+            <Tooltip title="向内收缩" overlayStyle={{ fontSize: "12px" }}>
+              <Button
+                size="small"
+                type="primary"
+                shape="circle"
+                icon={<MinusOutlined />}
+                onClick={() => props.changeDepth(-1)}
+              />
+            </Tooltip>
+          </Space>
+        </Space>
+      </Space>
     </Card>
   );
 }
