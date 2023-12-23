@@ -60,7 +60,7 @@ const DetailPage: React.FC = () => {
   }
 
   // TODO（协商AI请求类型）
-  const someType = "法律文书";
+  const someType = 0;
 
   // 聊天消息的状态
   const [chatMessages, setChatMessages] = useState([
@@ -76,28 +76,38 @@ const DetailPage: React.FC = () => {
     setInputValue("");
   }, [chatMessages]);
 
+  // 是否发起AI请求的开关
+  const [fetchAiData, setFetchAiData] = useState(false);
+  // 是否已经获取AI返回的数据，防止多次请求
+  const [isGetResponse, setIsGetResponse] = useState(false);
+
   // 使用 useSWR 发送请求
   const { data: AIdata, error: AIerror } = useSWR<AiSummaryResponse>(
-    `/ai/summarize?id=${id}&type=${someType}`,
+    fetchAiData && !isGetResponse
+      ? `/ai/summarize?id=${id}&type=${someType}`
+      : null,
     getFetcher
   );
   console.log("AI summary result:" + AIdata);
 
   // 当获取 AI 摘要成功时，更新 chatMessages
   useEffect(() => {
-    if (AIdata) {
+    if (fetchAiData && AIdata) {
+      setIsGetResponse(true);
       setChatMessages((prevMessages) => [
         ...prevMessages,
-        { content: AIdata.res, type: "ai" },
+        { content: AIdata.toString(), type: "ai" },
       ]);
     }
-  }, [AIdata]);
+  }, [fetchAiData, AIdata]);
 
   // 当获取 AI 摘要失败时，显示错误信息
-  if (AIerror) {
-    console.error("Failed to fetch AI summary:", AIerror);
-    message.error("获取 AI 摘要失败！");
-  }
+  useEffect(() => {
+    if (AIerror) {
+      console.error("Failed to fetch AI summary:", AIerror);
+      message.error("获取 AI 摘要失败！");
+    }
+  }, [AIerror]);
 
   // 处理用户输入并获取 AI 响应
   const handleUserInput = async () => {
@@ -137,10 +147,12 @@ const DetailPage: React.FC = () => {
 
   // 打开抽屉（AI辅助功能）
   const showDrawer = () => {
+    setFetchAiData(true);
     setOpen(true);
   };
   // 关闭抽屉
   const onClose = () => {
+    setFetchAiData(false);
     setOpen(false);
   };
 
@@ -181,10 +193,7 @@ const DetailPage: React.FC = () => {
   // 调用SWR hook来获取详情页的数据
   const { data, error, isLoading } = useSWR<DetailData>(
     `/search/detail?id=${id}`,
-    getFetcher,
-    {
-      refreshInterval: 1000,
-    }
+    getFetcher
   );
 
   // 显示正在加载的message
@@ -272,7 +281,7 @@ const DetailPage: React.FC = () => {
             <div className="feedback-box">
               <Typography.Title level={5}>您对这篇文档的评价</Typography.Title>
               <ThumbButtons
-                id={id || ""} // 如果 id 是 undefined，则使用空字符串(TODO)
+                id={id ?? -1} // 如果 id 是 undefined，则使用空字符串(TODO)
                 initialLikes={feedbackCnt.likes}
                 initialDislikes={feedbackCnt.dislikes}
               />
@@ -349,7 +358,11 @@ const DetailPage: React.FC = () => {
                 icon={<CustomerServiceOutlined />}
                 badge={{ dot: true }}
               >
-                <Tooltip title="快乐特效开启" placement="right" color="#7464FA">
+                <Tooltip
+                  title="开启/关闭快乐特效"
+                  placement="right"
+                  color="#7464FA"
+                >
                   <FloatButton
                     badge={{ dot: true }}
                     icon={<SmileOutlined />}
