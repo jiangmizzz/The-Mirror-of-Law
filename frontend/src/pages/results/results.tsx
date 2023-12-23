@@ -1,4 +1,15 @@
-import { Divider, Space, Tooltip, Button, Pagination, message } from "antd";
+import {
+  Divider,
+  Space,
+  Tooltip,
+  Button,
+  Pagination,
+  message,
+  Skeleton,
+  Spin,
+  Card,
+  Empty,
+} from "antd";
 import { LikeOutlined, DislikeOutlined } from "@ant-design/icons";
 import "./results.css";
 import { useEffect, useState } from "react";
@@ -272,10 +283,82 @@ export default function ResultsPage() {
       </>
     );
   }
+
+  // 显示加载效果骨架屏
+  if (resultLoading) {
+    return (
+      <div className="result-main">
+        <div className="result-header">
+          <div>
+            <Space align="baseline" style={{ paddingLeft: "4.5em" }}>
+              <Skeleton.Avatar active={true} shape={"square"} />
+              <Skeleton.Input active={true} />
+              <Skeleton.Button active={true} block={true} />
+              <Skeleton.Avatar active={true} shape={"circle"} />
+            </Space>
+            <Divider className="result-header-divider" />
+          </div>
+        </div>
+        <div className="result-main">
+          <div className="result-body">
+            <div className="result-body-content">
+              <div className="result-body-left">
+                <Skeleton loading={true} active avatar></Skeleton>
+                <Skeleton loading={true} active avatar></Skeleton>
+                <Skeleton loading={true} active avatar></Skeleton>
+                <Skeleton loading={true} active avatar></Skeleton>
+              </div>
+              <div className="result-body-right">
+                <Card>
+                  <Skeleton active />
+                  <Divider style={{ margin: "1em 0" }}></Divider>
+                  <Spin spinning={true}>
+                    <div className="img-loading">
+                      <Skeleton.Image
+                        active
+                        style={{
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          width: "100px",
+                          height: "100px",
+                        }}
+                      />
+                    </div>
+                  </Spin>
+                </Card>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 显示获取数据错误时的空数据界面
+  if (resultsError) {
+    return (
+      <div className="skeleton-box">
+        <Card
+          style={{
+            marginTop: "20px",
+            width: "800px",
+            height: "600px",
+            justifyContent: "center",
+            alignItems: "center",
+            display: "flex",
+          }}
+        >
+          <Empty description="暂无数据" />
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <>
-      {resultsError && <div>Error:{resultsError.message}</div>}
-      {resultLoading && <div>loading...</div>}
+      {/* {resultsError && <div>Error:{resultsError.message}</div>} */}
+      {/* {resultLoading && <div>loading...</div>} */}
       {!resultLoading && !resultsError && (
         <div className="result-main">
           <div className="result-header">
@@ -320,8 +403,31 @@ export default function ResultsPage() {
                 </div>
               </div>
               <div className="result-body-right">
-                {mapError && <div>error</div>}
-                {mapLoading && <div>loading...</div>}
+                {mapError && !mapLoading && (
+                  <Card>
+                    <Empty description="暂无数据" />
+                  </Card>
+                )}
+                {mapLoading && (
+                  <Card>
+                    <Skeleton active />
+                    <Divider style={{ margin: "1em 0" }}></Divider>
+                    <Spin spinning={true}>
+                      <div className="img-loading">
+                        <Skeleton.Image
+                          active
+                          style={{
+                            display: "flex",
+                            justifyContent: "center",
+                            alignItems: "center",
+                            width: "100px",
+                            height: "100px",
+                          }}
+                        />
+                      </div>
+                    </Spin>
+                  </Card>
+                )}
                 {!mapError && !mapLoading && (
                   <KnowledgeMap
                     center={
