@@ -273,7 +273,7 @@ const App: React.FC = () => {
             <Routes>
               <Route path="/search" element={<SearchPage />} />
               <Route path="/results" element={<ResultsPage />} />
-              <Route path="/detail/:id" element={<DetailPage />} />
+              <Route path="/detail/:id/:type" element={<DetailPage />} />
               <Route path="/" element={<Navigate to="/search" />} />
             </Routes>
           </Content>

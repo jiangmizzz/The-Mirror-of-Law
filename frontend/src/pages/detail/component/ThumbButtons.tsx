@@ -13,6 +13,7 @@ import FavoriteButton from "./favorite";
 import useSWRMutation from "swr";
 import { postFetcher } from "../../../utils.ts";
 import type { Response } from "../../../vite-env";
+import { useUserStore } from "../../../stores/userStore.tsx";
 
 // Props 接口
 interface ThumbButtonsProps {
@@ -30,6 +31,7 @@ const ThumbButtons: React.FC<ThumbButtonsProps> = ({
   const [dislikes, setDislikes] = useState(initialDislikes);
   // 记录用户是否点了赞和踩 true：点了赞  false：点了踩  null：无
   const [userLiked, setUserLiked] = useState<boolean | null>(null);
+  const userStore = useUserStore(); //全局用户状态管理器
   const customIcons: Record<number, React.ReactNode> = {
     1: <FrownOutlined />,
     2: <FrownOutlined />,
@@ -48,13 +50,10 @@ const ThumbButtons: React.FC<ThumbButtonsProps> = ({
 
   // 处理用户的点击行为
   const handleThumbClick = async (isLike: boolean) => {
-    // TODO: 判断用户是否登录
-    const isUserLoggedIn = true;
-    if (!isUserLoggedIn) {
-      // 如果未登录，重定向到登录页面
+    // 判断用户是否登录
+    if (!userStore.ifLogin) {
+      // 如果未登录，弹出消息提示
       message.warning("请先登录！");
-      // 跳转到登录界面（TODO: /login 界面还未设计）
-      window.location.href = "/login";
       return;
     }
 
