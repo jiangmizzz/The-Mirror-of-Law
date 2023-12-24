@@ -97,7 +97,9 @@ export default function ResultsPage() {
       pageNumber: String(currentPage),
     };
     //添加新的搜索内容到history中
-    userStore.addHistory(requestParams.input);
+    if (userStore.ifLogin) {
+      userStore.addHistory(requestParams.input);
+    }
     setParamsStr(new URLSearchParams(requestParams).toString());
     setMapParams({
       input: requestParams.input,
