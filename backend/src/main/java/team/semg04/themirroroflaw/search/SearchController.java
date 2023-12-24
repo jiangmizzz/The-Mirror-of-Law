@@ -317,6 +317,8 @@ public class SearchController {
             }
             if (user != null) {
                 LinkedHashSet<String> history = user.getHistoryAsSet();
+                // if input already exists, remove it and add it to the end
+                history.removeIf(input::equals);
                 history.add(input);
                 user.setHistoryFromSet(history);
                 userService.updateById(user);
@@ -390,8 +392,9 @@ public class SearchController {
             @Schema(implementation = Response.class)))
     })
     @PostMapping("/feedback")
-    public ResponseEntity<Response<Integer>> feedback(@RequestBody Feedback feedback, HttpServletRequest request,
-                                                      HttpServletResponse response) {
+    public synchronized ResponseEntity<Response<Integer>> feedback(@RequestBody Feedback feedback,
+                                                                   HttpServletRequest request,
+                                                                   HttpServletResponse response) {
         try {
             // update in user's feedback
             User user;

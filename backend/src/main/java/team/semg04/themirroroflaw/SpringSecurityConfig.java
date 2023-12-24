@@ -38,6 +38,8 @@ import team.semg04.themirroroflaw.user.utils.RememberMeService;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.springframework.security.core.authority.AuthorityUtils.createAuthorityList;
@@ -177,10 +179,11 @@ public class SpringSecurityConfig {
             // get UserInfo
             String id = authentication.getName();
             team.semg04.themirroroflaw.user.entity.User user = userService.getById(id);
-            List<String> history = List.copyOf(user.getHistoryAsSet());
-            if (history.size() > 20) {
-                history = history.subList(history.size() - 20, history.size());
+            List<String> history = new ArrayList<>(user.getHistoryAsSet());
+            if (history.size() > 10) {
+                history = history.subList(history.size() - 10, history.size());
             }
+            Collections.reverse(history);
             UserController.UserInfo userInfo = new UserController.UserInfo(user.getId(), user.getUsername(),
                     user.getEmail(), history.toArray(new String[0]),
                     user.getLikeAsList().toArray(new String[0]), user.getDislikeAsList().toArray(new String[0]));

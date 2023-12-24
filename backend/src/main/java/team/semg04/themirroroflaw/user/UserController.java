@@ -23,6 +23,8 @@ import team.semg04.themirroroflaw.user.entity.User;
 import team.semg04.themirroroflaw.user.service.UserService;
 import team.semg04.themirroroflaw.user.utils.RememberMeService;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 
@@ -172,10 +174,11 @@ public class UserController {
         try {
             try {
                 User user = getCurrentUser(request, response, userService, rememberMeService);
-                List<String> history = List.copyOf(user.getHistoryAsSet());
-                if (history.size() > 20) {
-                    history = history.subList(history.size() - 20, history.size());
+                List<String> history = new ArrayList<>(user.getHistoryAsSet());
+                if (history.size() > 10) {
+                    history = history.subList(history.size() - 10, history.size());
                 }
+                Collections.reverse(history);
                 UserInfo userInfo = new UserInfo(user.getId(), user.getUsername(), user.getEmail(),
                         history.toArray(new String[0]),
                         user.getLikeAsList().toArray(new String[0]),
