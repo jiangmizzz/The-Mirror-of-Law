@@ -17,7 +17,7 @@ import { useUserStore } from "../../../stores/userStore.tsx";
 
 // Props 接口
 interface ThumbButtonsProps {
-  id: number; // 从父组件传递的文档id
+  id: string; // 从父组件传递的文档id
   initialLikes: number;
   initialDislikes: number;
 }

@@ -56,10 +56,10 @@ export const useUserStore = create<userState>()((set) => ({
       if (state.history.indexOf(newHistory) !== -1) {
         //当前历史记录已经存在，不做任何更改
         return state;
-      } else if (state.history.length == 20) {
-        //已满20条
+      } else if (state.history.length == 10) {
+        //已满10条
         return {
-          history: [newHistory, ...state.history.slice(0, 19)],
+          history: [newHistory, ...state.history.slice(0, 9)],
         };
       } else {
         return {
@@ -86,26 +86,34 @@ export const useUserStore = create<userState>()((set) => ({
         const index: number = state.likes.indexOf(id);
         return {
           //后端无误的话这个index一定不会是-1
-          likes: state.likes.splice(index, 1),
+          likes: state.likes
+            .slice(0, index)
+            .concat(state.likes.slice(index + 1)),
         };
       } else if (actionCode == 3) {
         //取消点踩
         const index: number = state.dislikes.indexOf(id);
         return {
-          dislikes: state.dislikes.splice(index, 1),
+          dislikes: state.dislikes
+            .slice(0, index)
+            .concat(state.dislikes.slice(index + 1)),
         };
       } else if (actionCode == 4) {
         //点赞变为点踩
         const index: number = state.likes.indexOf(id);
         return {
-          likes: state.likes.splice(index, 1),
+          likes: state.likes
+            .slice(0, index)
+            .concat(state.likes.slice(index + 1)),
           dislikes: [...state.dislikes, id],
         };
       } else {
         //点踩变为点赞
         const index: number = state.dislikes.indexOf(id);
         return {
-          dislikes: state.dislikes.splice(index, 1),
+          dislikes: state.dislikes
+            .slice(0, index)
+            .concat(state.dislikes.slice(index + 1)),
           likes: [...state.likes, id],
         };
       }

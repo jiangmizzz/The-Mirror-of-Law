@@ -1,5 +1,5 @@
 // DetailPage.tsx
-import React, { useRef, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import {
   Card,
@@ -33,7 +33,7 @@ import { getFetcher } from "../../utils.ts";
 const { TextArea } = Input;
 import AI_avatar from "../../assets/iconSideChatDoc.png";
 import WordCloudComponent from "./component/WordCloud.tsx";
-import FireworksComponent from "./component/FireworksComponent.tsx"; // 引入新的子组件
+import ClickComponent from "./component/ClickComponent.tsx"; // 引入新的子组件
 import { useUserStore } from "../../stores/userStore.tsx";
 
 // TODO， 没有相应接口，mock数据
@@ -46,13 +46,17 @@ async function getAiResponse(userMessage: string): Promise<string> {
 }
 
 const DetailPage: React.FC = () => {
-  const { id, type } = useParams(); // 根据url来获取params
+  const { id, type } = useParams<{ id?: string; type?: string }>(); // 根据url来获取params
+
+  // 显式进行类型转换
+  const stringId: string = id ?? ""; // 如果 id 为 undefined，使用默认值 ""
+  const numericType: number = type ? parseInt(type, 10) : -1; // 如果 type 为 undefined，使用默认值 -1
   //   const [data, setData] = useState<any>({}); // 初始化为空对象
   const [inputValue, setInputValue] = useState(""); // AI chatbot textarea中的文本（用户输入的信息）
   const [messageApi, contextHolder] = message.useMessage(); // 全局提示
   const [ifOpen, setOpen] = useState<boolean>(false); // 是否启用AI辅助功能（打开抽屉）
   const [isOpenFloatTooltip, setIsOpenFloatTooltip] = useState(true);
-  const [isFireworksOn, setIsFireworksOn] = useState(true); // 是否开启快乐特效（鼠标点击动效）
+  const [isClickOn, setIsClickOn] = useState(true); // 是否开启快乐特效（鼠标点击动效）
   const userStore = useUserStore(); //全局用户状态管理器
 
   const [detailData, setDetailData] = useState<DetailData | null>(null); // 在 DetailPage 组件中定义一个状态变量用于存储详情数据
@@ -88,7 +92,7 @@ const DetailPage: React.FC = () => {
       // 设置条件防止发送多次请求
       return false;
     }
-    return "/ai/summarize?id=" + id + "&type=" + type;
+    return "/ai/summarize?id=" + stringId + "&type=" + numericType;
   }, getFetcher);
   console.log("AI summary result:" + AIdata);
 
@@ -160,8 +164,8 @@ const DetailPage: React.FC = () => {
 
   // 改变鼠标点击动效的开启状态
   const changeCSS = () => {
-    setIsFireworksOn((prevValue) => !prevValue);
-    console.log("点击特效开启状态：" + isFireworksOn);
+    setIsClickOn((prevValue) => !prevValue);
+    console.log("点击特效开启状态：" + isClickOn);
   };
 
   // 回到上一个页面
@@ -199,7 +203,7 @@ const DetailPage: React.FC = () => {
     if (isGetDetail) {
       return false;
     }
-    return "/search/detail?id=" + id;
+    return "/search/detail?id=" + stringId + "&type=" + numericType;
   }, getFetcher);
 
   // 显示正在加载的message
@@ -283,13 +287,13 @@ const DetailPage: React.FC = () => {
   return (
     <div className="detail-box">
       {/* 鼠标点击动效组件 */}
-      <FireworksComponent isOpen={isFireworksOn} />
+      <ClickComponent isOpen={isClickOn} />
       <div className="left-box">
         <div className="left-sticky-box">
           <Card>
             {
               <div className="world-cloud">
-                <WordCloudComponent id={id} type={type} />
+                <WordCloudComponent id={stringId} type={numericType} />
               </div>
             }
           </Card>
@@ -300,7 +304,7 @@ const DetailPage: React.FC = () => {
                   您对这篇文档的评价
                 </Typography.Title>
                 <ThumbButtons
-                  id={id ?? -1} // 如果 id 是 undefined，则使用空字符串(TODO)
+                  id={stringId ?? -1} // 如果 id 是 undefined，则使用空字符串(TODO)
                   initialLikes={feedbackCnt.likes}
                   initialDislikes={feedbackCnt.dislikes}
                 />
@@ -362,7 +366,7 @@ const DetailPage: React.FC = () => {
 
               <Typography.Title level={5}>您对这篇文档的评价</Typography.Title>
               <ThumbButtons
-                id={id || ""} // 如果 id 是 undefined，则使用空字符串(TODO)
+                id={stringId || ""} // 如果 id 是 undefined，则使用空字符串(TODO)
                 initialLikes={feedbackCnt.likes}
                 initialDislikes={feedbackCnt.dislikes}
               />
