@@ -12,7 +12,7 @@ import type { CheckboxChangeEvent } from "antd/es/checkbox";
 import logo from "../../assets/main-logo.svg";
 import { useState } from "react";
 import useSWRMutation from "swr/mutation";
-import { postFetcher } from "../../utils";
+import { postFetcher, putFetcher } from "../../utils";
 import { UserInfo } from "../../vite-env";
 import type { Response } from "../../vite-env";
 import { useUserStore } from "../../stores/userStore";
@@ -54,6 +54,28 @@ export default function LogPop(props: LogPopProps) {
         password: string;
       }
     >("/user/register", postFetcher);
+  //编辑信息的trigger
+  const { trigger: editInfoTrigger, isMutating: iseditingInfo } =
+    useSWRMutation<
+      Response<null>,
+      Error,
+      string,
+      {
+        email: string;
+        userName: string;
+      }
+    >("/user/modify/info", putFetcher);
+  //编辑密码的trigger
+  const { trigger: editPasswordTrigger, isMutating: iseditingPassword } =
+    useSWRMutation<
+      Response<null>,
+      Error,
+      string,
+      {
+        oldPassword: string;
+        newPassword: string;
+      }
+    >("/user/modify/password", putFetcher);
 
   function submitText(type: string): string {
     switch (type) {
@@ -66,7 +88,6 @@ export default function LogPop(props: LogPopProps) {
     }
   }
 
-  //TODO:处理不同类的提交事件
   //需要根据提交的类型调用不同的请求
   async function handleSubmit(formValue: Record<string, any>) {
     if (popType == "login") {
@@ -80,7 +101,14 @@ export default function LogPop(props: LogPopProps) {
       if (loginRes.success) {
         //成功登录，修改当前状态，并关闭窗口
         const data = loginRes.data!;
-        useStore.login(data.id, data.userName, data.email, data.history);
+        useStore.login(
+          data.id,
+          data.userName,
+          data.email,
+          data.history.slice(0, 20), //保留前20条（可更改
+          data.like,
+          data.dislike
+        );
         message.success("登录成功!");
         props.closePop();
       } else if (loginRes.errorCode == "1") {
@@ -125,6 +153,47 @@ export default function LogPop(props: LogPopProps) {
           registerRes.errorCode + ": " + registerRes.errorMessage
         );
       }
+    } else if (popType == "edit-info") {
+      //编辑信息
+      const editRes = await editInfoTrigger({
+        email: formValue.email,
+        userName: formValue.username,
+      });
+      if (editRes.success) {
+        //成功编辑
+        message.success("编辑个人信息成功!");
+        useStore.editInfo(formValue.username, formValue.email);
+        props.closePop();
+      } else if (editRes.errorCode == "409") {
+        //用户名或邮箱已存在
+        message.info("用户名或邮箱已存在!");
+      } else {
+        //发生未知错误
+        message.error(
+          "发生未知错误: " + editRes.errorCode + ": " + editRes.errorMessage
+        );
+        throw new Error(editRes.errorCode + ": " + editRes.errorMessage);
+      }
+    } else if (popType == "edit-password") {
+      //编辑密码
+      const editRes = await editPasswordTrigger({
+        oldPassword: formValue.oldPassword,
+        newPassword: formValue.newPassword,
+      });
+      if (editRes.success) {
+        //成功编辑
+        message.success("编辑密码成功!");
+        props.closePop();
+      } else if (editRes.errorCode == "401") {
+        //密码错误
+        message.info("原密码输入错误!");
+      } else {
+        //发生未知错误
+        message.error(
+          "发生未知错误: " + editRes.errorCode + ": " + editRes.errorMessage
+        );
+        throw new Error(editRes.errorCode + ": " + editRes.errorMessage);
+      }
     }
   }
 
@@ -156,8 +225,18 @@ export default function LogPop(props: LogPopProps) {
             //此处获取表单提交值
             onFinish={handleSubmit}
             className="LogPop-body"
-            title={<img src={logo} style={{ height: "3em" }} />}
-            subTitle="律镜  —— AI+ 智能法律搜索引擎"
+            title={
+              popType == "login" || popType == "register" ? (
+                <img src={logo} style={{ height: "3em" }} />
+              ) : (
+                "编辑用户信息"
+              )
+            }
+            subTitle={
+              popType == "login" || popType == "register"
+                ? "律镜  —— AI+ 智能法律搜索引擎"
+                : "注意各信息项的格式要求"
+            }
             submitter={{
               searchConfig: { submitText: submitText(popType) },
               render: (props) => {
@@ -193,8 +272,12 @@ export default function LogPop(props: LogPopProps) {
                       size="large"
                       //这里选择的属性可以直接写submit/reset，也可以调用formInstance中的方法
                       onClick={() => props.submit()}
-                      //TODO:之后增加多种按钮的‘或’条件判断
-                      loading={isLogining || isRegistering}
+                      loading={
+                        isLogining ||
+                        isRegistering ||
+                        iseditingInfo ||
+                        iseditingPassword
+                      }
                     >
                       {submitText(popType)}
                     </Button>
@@ -203,24 +286,30 @@ export default function LogPop(props: LogPopProps) {
               },
             }}
           >
-            <ProFormText
-              name="email"
-              fieldProps={{
-                size: "large",
-                prefix: <MailOutlined />,
-              }}
-              placeholder={popType == "register" ? "有效的邮箱号" : "邮箱号"}
-              rules={[
-                {
-                  required: true,
-                  message: "请输入正确的邮箱号!",
-                  type: "email",
-                },
-              ]}
-            />
-            {popType == "register" && (
+            {popType != "edit-password" && (
+              <ProFormText
+                name="email"
+                initialValue={props.email}
+                fieldProps={{
+                  size: "large",
+                  prefix: <MailOutlined />,
+                }}
+                placeholder={
+                  popType == "register" ? "有效的邮箱号 (唯一)" : "邮箱号"
+                }
+                rules={[
+                  {
+                    required: true,
+                    message: "请输入正确的邮箱号!",
+                    type: "email",
+                  },
+                ]}
+              />
+            )}
+            {(popType == "register" || popType == "edit-info") && (
               <ProFormText
                 name="username"
+                initialValue={props.userName}
                 fieldProps={{
                   size: "large",
                   prefix: <UserOutlined />,
@@ -250,36 +339,82 @@ export default function LogPop(props: LogPopProps) {
                 ]}
               />
             )}
-            <ProFormText.Password
-              name="password"
-              fieldProps={{
-                size: "large",
-                prefix: <LockOutlined />,
-              }}
-              placeholder={"密码"}
-              rules={[
-                {
-                  required: true,
-                  message: "请输入密码！",
-                },
-                {
-                  validator(_, value, callback) {
-                    const regExp = /^[a-zA-Z0-9_-]{5,20}$/;
-                    if (
-                      popType == "register" &&
-                      value != "" &&
-                      !regExp.test(value)
-                    ) {
-                      callback(
-                        "密码不合法(长度在5-20位, 只能包含大小写字母、数字、下划线和减号)"
-                      );
-                    } else {
-                      callback();
-                    }
+            {(popType == "register" || popType == "login") && (
+              <ProFormText.Password
+                name="password"
+                fieldProps={{
+                  size: "large",
+                  prefix: <LockOutlined />,
+                }}
+                placeholder={"密码"}
+                rules={[
+                  {
+                    required: true,
+                    message: "请输入密码！",
                   },
-                },
-              ]}
-            />
+                  {
+                    validator(_, value, callback) {
+                      const regExp = /^[a-zA-Z0-9_-]{5,20}$/;
+                      if (
+                        popType == "register" &&
+                        value != "" &&
+                        !regExp.test(value)
+                      ) {
+                        callback(
+                          "密码不合法(长度在5-20位, 只能包含大小写字母、数字、下划线和减号)"
+                        );
+                      } else {
+                        callback();
+                      }
+                    },
+                  },
+                ]}
+              />
+            )}
+            {popType == "edit-password" && (
+              <ProFormText.Password
+                name="oldPassword"
+                fieldProps={{
+                  size: "large",
+                  prefix: <LockOutlined />,
+                }}
+                placeholder={"原密码"}
+                rules={[
+                  {
+                    required: true,
+                    message: "请输入原密码！",
+                  },
+                ]}
+              />
+            )}
+            {popType == "edit-password" && (
+              <ProFormText.Password
+                name="newPassword"
+                fieldProps={{
+                  size: "large",
+                  prefix: <LockOutlined />,
+                }}
+                placeholder={"新密码"}
+                rules={[
+                  {
+                    required: true,
+                    message: "请输入新密码！",
+                  },
+                  {
+                    validator(_, value, callback) {
+                      const regExp = /^[a-zA-Z0-9_-]{5,20}$/;
+                      if (!regExp.test(value)) {
+                        callback(
+                          "密码不合法(长度在5-20位, 只能包含大小写字母、数字、下划线和减号)"
+                        );
+                      } else {
+                        callback();
+                      }
+                    },
+                  },
+                ]}
+              />
+            )}
           </LoginForm>
         </Card>
       </div>
