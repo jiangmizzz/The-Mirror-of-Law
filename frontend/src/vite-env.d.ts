@@ -19,6 +19,8 @@ export interface UserInfo {
   userName: string; //唯一的用户名
   email: string; //用户的注册邮箱
   history: string[]; //最近20条搜索记录（输入值）
+  like: string[];
+  dislike: string[];
 }
 //图谱节点信息
 export interface NodeInfo {
