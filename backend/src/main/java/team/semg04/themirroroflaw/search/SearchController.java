@@ -409,6 +409,14 @@ public class SearchController {
                     List<String> like = user.getLikeAsList();
                     like.remove(feedback.getId());
                     user.setLikeFromList(like);
+                } else if (user.getDislikeAsList().contains(feedback.getId())) {
+                    feedbackType = FeedbackType.DISLIKE_TO_LIKE;
+                    List<String> dislike = user.getDislikeAsList();
+                    dislike.remove(feedback.getId());
+                    user.setDislikeFromList(dislike);
+                    List<String> like = user.getLikeAsList();
+                    like.add(feedback.getId());
+                    user.setLikeFromList(like);
                 } else {
                     feedbackType = FeedbackType.LIKE;
                     List<String> like = user.getLikeAsList();
@@ -420,6 +428,14 @@ public class SearchController {
                     feedbackType = FeedbackType.CANCEL_DISLIKE;
                     List<String> dislike = user.getDislikeAsList();
                     dislike.remove(feedback.getId());
+                    user.setDislikeFromList(dislike);
+                } else if (user.getLikeAsList().contains(feedback.getId())) {
+                    feedbackType = FeedbackType.LIKE_TO_DISLIKE;
+                    List<String> like = user.getLikeAsList();
+                    like.remove(feedback.getId());
+                    user.setLikeFromList(like);
+                    List<String> dislike = user.getDislikeAsList();
+                    dislike.add(feedback.getId());
                     user.setDislikeFromList(dislike);
                 } else {
                     feedbackType = FeedbackType.DISLIKE;
@@ -443,6 +459,14 @@ public class SearchController {
                     case DISLIKE -> laws.setDislike(laws.getDislike() + 1);
                     case CANCEL_LIKE -> laws.setLike(laws.getLike() - 1);
                     case CANCEL_DISLIKE -> laws.setDislike(laws.getDislike() - 1);
+                    case LIKE_TO_DISLIKE -> {
+                        laws.setLike(laws.getLike() - 1);
+                        laws.setDislike(laws.getDislike() + 1);
+                    }
+                    case DISLIKE_TO_LIKE -> {
+                        laws.setLike(laws.getLike() + 1);
+                        laws.setDislike(laws.getDislike() - 1);
+                    }
                 }
                 elasticsearchOperations.save(laws);
                 log.debug("Feedback success. Id: " + feedback.getId());
@@ -470,7 +494,7 @@ public class SearchController {
     }
 
     public enum FeedbackType {
-        LIKE, DISLIKE, CANCEL_LIKE, CANCEL_DISLIKE
+        LIKE, DISLIKE, CANCEL_LIKE, CANCEL_DISLIKE, LIKE_TO_DISLIKE, DISLIKE_TO_LIKE
     }
 
     @Data
