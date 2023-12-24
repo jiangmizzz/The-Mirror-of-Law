@@ -73,9 +73,9 @@ export async function putFetcher(
     mode: "cors",
   }).then((res) => res.json())) as Response<any>;
 
-  if (!resp.success) {
-    throw new Error(resp.errorCode + ": " + resp.errorMessage);
-  }
+  // if (!resp.success) {
+  //   throw new Error(resp.errorCode + ": " + resp.errorMessage);
+  // }
   // console.log(resp);
   return resp;
 }

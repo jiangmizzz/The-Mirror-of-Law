@@ -186,7 +186,7 @@ export default function LogPop(props: LogPopProps) {
         props.closePop();
       } else if (editRes.errorCode == "401") {
         //密码错误
-        message.info("原密码输入错误!");
+        message.error("原密码输入错误!");
       } else {
         //发生未知错误
         message.error(
@@ -324,7 +324,7 @@ export default function LogPop(props: LogPopProps) {
                     validator(_, value, callback) {
                       const regExp = /^[a-zA-Z0-9_-]{5,20}$/;
                       if (
-                        popType == "register" &&
+                        (popType == "register" || popType == "edit-info") &&
                         value != "" &&
                         !regExp.test(value)
                       ) {
