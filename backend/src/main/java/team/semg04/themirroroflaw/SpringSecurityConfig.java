@@ -69,46 +69,38 @@ public class SpringSecurityConfig {
         http.authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/api/user/login").permitAll()
                         .requestMatchers("/api/user/register").permitAll()
-                        .requestMatchers("/api/search/**").permitAll()
+                        .requestMatchers("/api/search/list").permitAll()
+                        .requestMatchers("/api/search/detail").permitAll()
                         .requestMatchers("/api/ai/**").permitAll()
                         .requestMatchers("/api/word-cloud/**").permitAll()
                         .requestMatchers("/api/graph/**").permitAll()
                         .requestMatchers("/swagger-ui/**").permitAll()
                         .requestMatchers("api-docs/**").permitAll()
-                        .anyRequest().authenticated()
-                )
+                        .anyRequest().authenticated())
                 // TODO: set csrf
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .httpBasic(basic ->
-                        basic.authenticationEntryPoint(
-                                (request, response, authException) -> {
-                                    response.setContentType("application/json;charset=UTF-8");
-                                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                                    PrintWriter out = response.getWriter();
-                                    Response<Void> ret = new Response<>(false, null,
-                                            HttpStatus.UNAUTHORIZED.value(), "User not logged in.");
-                                    out.write(objectMapper.writeValueAsString(ret));
-                                    out.flush();
-                                    out.close();
-                                }
-                        )
-                )
+                .httpBasic(basic -> basic.authenticationEntryPoint((request, response, authException) -> {
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    PrintWriter out = response.getWriter();
+                    Response<Void> ret = new Response<>(false, null, HttpStatus.UNAUTHORIZED.value(), "User not " +
+                            "logged in.");
+                    out.write(objectMapper.writeValueAsString(ret));
+                    out.flush();
+                    out.close();
+                }))
                 .rememberMe(remember -> remember.rememberMeServices(rememberMeServices()))
-                .logout(
-                        logout -> logout.logoutUrl("/api/user/logout").logoutSuccessHandler(
-                                (request, response, authentication) -> {
-                                    response.setContentType("application/json;charset=UTF-8");
-                                    response.setStatus(HttpServletResponse.SC_OK);
-                                    PrintWriter out = response.getWriter();
-                                    Response<Void> ret = new Response<>(true, null,
-                                            HttpStatus.OK.value(), null);
-                                    out.write(objectMapper.writeValueAsString(ret));
-                                    out.flush();
-                                    out.close();
-                                }
-                        ).deleteCookies("remember-me")
-                )
+                .logout(logout -> logout.logoutUrl("/api/user/logout").logoutSuccessHandler((request, response,
+                                                                                             authentication) -> {
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.setStatus(HttpServletResponse.SC_OK);
+                    PrintWriter out = response.getWriter();
+                    Response<Void> ret = new Response<>(true, null, HttpStatus.OK.value(), null);
+                    out.write(objectMapper.writeValueAsString(ret));
+                    out.flush();
+                    out.close();
+                }).deleteCookies("remember-me"))
                 .addFilterBefore(authenticationFilter, BasicAuthenticationFilter.class)
                 // 用于包装请求，原始请求无法重复读取body，不知道是什么诡异设计
                 .addFilterBefore(new HttpRequestFilter(), AuthenticationFilter.class);
@@ -186,7 +178,8 @@ public class SpringSecurityConfig {
             String id = authentication.getName();
             team.semg04.themirroroflaw.user.entity.User user = userService.getById(id);
             UserController.UserInfo userInfo = new UserController.UserInfo(user.getId(), user.getUsername(),
-                    user.getEmail(), null);
+                    user.getEmail(), user.getHistoryAsSet().toArray(new String[0]),
+                    user.getLikeAsList().toArray(new String[0]), user.getDislikeAsList().toArray(new String[0]));
 
             PrintWriter out = response.getWriter();
             Response<UserController.UserInfo> ret = new Response<>(true, userInfo, 0, null);
