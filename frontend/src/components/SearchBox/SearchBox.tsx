@@ -25,6 +25,7 @@ import TextArea from "antd/es/input/TextArea";
 import AI_avatar from "../../assets/iconSideChatDoc.png";
 import useSWR from "swr";
 import { getFetcher } from "../../utils.ts";
+import { useUserStore } from "../../stores/userStore.tsx";
 
 const { RangePicker } = DatePicker;
 
@@ -49,6 +50,7 @@ export default function SearchBox(props: {
     "法律观点",
     "资讯",
   ];
+  const userStore = useUserStore();
   const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate(); //导航到其他页面
   const defaultResultTypes = ["法律法规", "裁判文书"];
@@ -415,11 +417,7 @@ export default function SearchBox(props: {
           <AutoComplete
             style={{ width: props.width }}
             //之后编辑为历史搜索记录
-            options={[
-              { value: "刑法" },
-              { value: "国务院" },
-              { value: "未成年人保护法" },
-            ]}
+            options={userStore.history.map((str) => ({ value: str }))}
             size="large"
             open={ifPop}
             onFocus={() => setPop(true)}

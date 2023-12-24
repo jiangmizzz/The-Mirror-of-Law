@@ -56,10 +56,10 @@ export const useUserStore = create<userState>()((set) => ({
       if (state.history.indexOf(newHistory) !== -1) {
         //当前历史记录已经存在，不做任何更改
         return state;
-      } else if (state.history.length == 20) {
-        //已满20条
+      } else if (state.history.length == 10) {
+        //已满10条
         return {
-          history: [newHistory, ...state.history.slice(0, 19)],
+          history: [newHistory, ...state.history.slice(0, 9)],
         };
       } else {
         return {
