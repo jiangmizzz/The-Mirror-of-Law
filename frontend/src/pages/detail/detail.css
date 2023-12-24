@@ -4,13 +4,19 @@
   display: flex;
 }
 .left-box {
+  position: sticky;
+  top: 0; /* 粘在视口的顶部 */
   flex-direction: column;
   float: left;
   width: 30%;
   margin: 20px 40px;
-  position: sticky;
-  top: 0; /* 粘在视口的顶部 */
 }
+
+.left-sticky-box {
+  position: sticky;
+  top: 80px; /* 粘在视口的顶部 */
+}
+
 .right-box {
   float: right;
   width: 60%;
@@ -18,6 +24,9 @@
 }
 
 .world-cloud {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 90%;
   height: 90%;
 }

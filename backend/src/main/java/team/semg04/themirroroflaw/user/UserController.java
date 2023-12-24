@@ -23,6 +23,9 @@ import team.semg04.themirroroflaw.user.entity.User;
 import team.semg04.themirroroflaw.user.service.UserService;
 import team.semg04.themirroroflaw.user.utils.RememberMeService;
 
+import java.util.LinkedHashSet;
+import java.util.List;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/user")
@@ -33,6 +36,35 @@ public class UserController {
 
     private RememberMeService rememberMeService;
 
+    // 根据请求中的Cookie获取当前用户
+    public static User getCurrentUser(HttpServletRequest request, HttpServletResponse response,
+                                      UserService userService, RememberMeService rememberMeService) {
+        Authentication data = rememberMeService.autoLogin(request, response);
+        if (data != null) {
+            String id = ((org.springframework.security.core.userdetails.User) data.getPrincipal()).getUsername();
+            User user = userService.getById(id);
+            if (user == null) {
+                throw new RuntimeException("User not found");
+            } else {
+                return user;
+            }
+        } else {
+            throw new RuntimeException("User not found");
+        }
+    }
+
+    public static Boolean validateUsername(String username) {
+        return username.matches("^[a-zA-Z0-9_-]{5,20}$");
+    }
+
+    public static Boolean validatePassword(String password) {
+        return password.matches("^[a-zA-Z0-9_-]{5,20}$");
+    }
+
+    public static Boolean validateEmail(String email) {
+        return email.matches("^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+$");
+    }
+
     @Autowired
     public void setUserService(UserService userService) {
         this.userService = userService;
@@ -41,18 +73,6 @@ public class UserController {
     @Autowired
     public void setRememberMeService(RememberMeService rememberMeService) {
         this.rememberMeService = rememberMeService;
-    }
-
-    private Boolean validateUsername(String username) {
-        return username.matches("^[a-zA-Z0-9_-]{5,20}$");
-    }
-
-    private Boolean validatePassword(String password) {
-        return password.matches("^[a-zA-Z0-9_-]{5,20}$");
-    }
-
-    private Boolean validateEmail(String email) {
-        return email.matches("^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+$");
     }
 
     @Operation(summary = "用户注册", description = "用户注册，用户名和密码长度在5-20位，只能包含字母、数字、下划线和减号，邮箱格式必须正确，用户名与邮箱不能重复。")
@@ -69,17 +89,17 @@ public class UserController {
     public ResponseEntity<Response<Void>> register(@RequestBody UserRegister userRegister) {
         try {
             if (!validateUsername(userRegister.getUserName())) {
-                log.error("User register error: Username not valid. Username: " + userRegister.getUserName());
+                log.warn("User register error: Username not valid. Username: " + userRegister.getUserName());
                 return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(),
                         "Username not valid."), HttpStatus.BAD_REQUEST);
             }
             if (!validatePassword(userRegister.getPassword())) {
-                log.error("User register error: Password not valid. Password: " + userRegister.getPassword());
+                log.warn("User register error: Password not valid. Password: " + userRegister.getPassword());
                 return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(),
                         "Password not valid."), HttpStatus.BAD_REQUEST);
             }
             if (!validateEmail(userRegister.getEmail())) {
-                log.error("User register error: Email not valid. Email: " + userRegister.getEmail());
+                log.warn("User register error: Email not valid. Email: " + userRegister.getEmail());
                 return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(),
                         "Email not valid."), HttpStatus.BAD_REQUEST);
             }
@@ -92,14 +112,17 @@ public class UserController {
             user.setUsername(userRegister.getUserName());
             user.setPassword(userRegister.getPassword());
             user.setEmail(userRegister.getEmail());
+            user.setHistoryFromSet(new LinkedHashSet<>());
+            user.setLikeFromList(List.of());
+            user.setDislikeFromList(List.of());
             userService.save(user);
 
-            log.info("User register success. Username: " + userRegister.getUserName());
+            log.debug("User register success. Username: " + userRegister.getUserName());
             return new ResponseEntity<>(new Response<>(true, null, 0, "Register success."), HttpStatus.CREATED);
         } catch (Exception e) {
             if (e.getMessage().contains("Duplicate entry")) {
                 String duplicate = e.getMessage().split("'")[3].split("\\.")[1];
-                log.error("User register error: Duplicate entry. Duplicate: " + duplicate);
+                log.warn("User register error: Duplicate entry. Duplicate: " + duplicate);
                 return new ResponseEntity<>(new Response<>(false, null, duplicate.equals("username") ? 2 : 1,
                         duplicate + " already exists!"), HttpStatus.CONFLICT);
             }
@@ -148,12 +171,14 @@ public class UserController {
     public ResponseEntity<Response<UserInfo>> getUserInfo(HttpServletRequest request, HttpServletResponse response) {
         try {
             try {
-                User user = getCurrentUser(request, response);
-                UserInfo userInfo = new UserInfo(user.getId(), user.getUsername(), user.getEmail(), null);
-                // TODO: get history
+                User user = getCurrentUser(request, response, userService, rememberMeService);
+                UserInfo userInfo = new UserInfo(user.getId(), user.getUsername(), user.getEmail(),
+                        user.getHistoryAsSet().toArray(new String[0]), user.getLikeAsList().toArray(new String[0]),
+                        user.getDislikeAsList().toArray(new String[0]));
+                log.debug("Get user info success. Username: " + user.getUsername());
                 return new ResponseEntity<>(new Response<>(true, userInfo, 0, null), HttpStatus.OK);
             } catch (Exception e) {
-                log.error("Get user info failed: User not found." + e.getMessage());
+                log.warn("Get user info failed: User not found." + e.getMessage());
                 return new ResponseEntity<>(new Response<>(false, null, HttpStatus.NOT_FOUND.value(),
                         "User not found."), HttpStatus.NOT_FOUND);
             }
@@ -161,22 +186,6 @@ public class UserController {
             log.error("Get user info failed: " + e.getMessage());
             return new ResponseEntity<>(new Response<>(false, null, HttpStatus.INTERNAL_SERVER_ERROR.value(),
                     "Internal server error."), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    // 根据请求中的Cookie获取当前用户
-    public User getCurrentUser(HttpServletRequest request, HttpServletResponse response) {
-        Authentication data = rememberMeService.autoLogin(request, response);
-        if (data != null) {
-            String id = ((org.springframework.security.core.userdetails.User) data.getPrincipal()).getUsername();
-            User user = userService.getById(id);
-            if (user == null) {
-                throw new RuntimeException("User not found");
-            } else {
-                return user;
-            }
-        } else {
-            throw new RuntimeException("User not found");
         }
     }
 
@@ -197,16 +206,16 @@ public class UserController {
                                                          HttpServletRequest request, HttpServletResponse response) {
         try {
             try {
-                User user = getCurrentUser(request, response);
+                User user = getCurrentUser(request, response, userService, rememberMeService);
 
                 // validate username and email
                 if (!validateUsername(userModify.getUserName())) {
-                    log.error("User modify error: Username not valid. Username: " + userModify.getUserName());
+                    log.warn("User modify error: Username not valid. Username: " + userModify.getUserName());
                     return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(),
                             "Username not valid."), HttpStatus.BAD_REQUEST);
                 }
                 if (!validateEmail(userModify.getEmail())) {
-                    log.error("User modify error: Email not valid. Email: " + userModify.getEmail());
+                    log.warn("User modify error: Email not valid. Email: " + userModify.getEmail());
                     return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(),
                             "Email not valid."), HttpStatus.BAD_REQUEST);
                 }
@@ -216,12 +225,12 @@ public class UserController {
                 User userWithSameUsername = userService.getByUsername(userModify.getUserName());
                 User userWithSameEmail = userService.getByEmail(userModify.getEmail());
                 if (userWithSameUsername != null && !userWithSameUsername.getId().equals(user.getId())) {
-                    log.error("User modify error: Username already exists. Username: " + userModify.getUserName());
+                    log.warn("User modify error: Username already exists. Username: " + userModify.getUserName());
                     return new ResponseEntity<>(new Response<>(false, null, HttpStatus.CONFLICT.value(),
                             "Username already exists."), HttpStatus.CONFLICT);
                 }
                 if (userWithSameEmail != null && !userWithSameEmail.getId().equals(user.getId())) {
-                    log.error("User modify error: Email already exists. Email: " + userModify.getEmail());
+                    log.warn("User modify error: Email already exists. Email: " + userModify.getEmail());
                     return new ResponseEntity<>(new Response<>(false, null, HttpStatus.CONFLICT.value(),
                             "Email already exists."), HttpStatus.CONFLICT);
                 }
@@ -231,7 +240,7 @@ public class UserController {
                 user.setEmail(userModify.getEmail());
                 userService.updateById(user);
 
-                log.info("User modify success.");
+                log.debug("User modify success.");
                 return new ResponseEntity<>(new Response<>(true, null, 0, null), HttpStatus.OK);
             } catch (Exception e) {
                 log.error("User modify error: User not found." + e.getMessage());
@@ -262,11 +271,11 @@ public class UserController {
                                                              HttpServletRequest request, HttpServletResponse response) {
         try {
             try {
-                User user = getCurrentUser(request, response);
+                User user = getCurrentUser(request, response, userService, rememberMeService);
 
                 // validate password
                 if (!validatePassword(userModifyPassword.getNewPassword())) {
-                    log.error("User modify error: Password not valid. Password: " + userModifyPassword.getNewPassword());
+                    log.warn("User modify error: Password not valid. Password: " + userModifyPassword.getNewPassword());
                     return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(),
                             "Password not valid."), HttpStatus.BAD_REQUEST);
                 }
@@ -274,7 +283,7 @@ public class UserController {
                 // check if old password is correct
                 PasswordEncoder passwordEncoder = PasswordEncoderFactories.createDelegatingPasswordEncoder();
                 if (!passwordEncoder.matches(userModifyPassword.getOldPassword(), user.getPassword())) {
-                    log.error("User modify error: Old password not correct.");
+                    log.warn("User modify error: Old password not correct.");
                     return new ResponseEntity<>(new Response<>(false, null, HttpStatus.UNAUTHORIZED.value(),
                             "Old password not correct."), HttpStatus.UNAUTHORIZED);
                 }
@@ -286,7 +295,7 @@ public class UserController {
                 user.setPassword(passwordEncoder.encode(userModifyPassword.getNewPassword()));
                 userService.updateById(user);
 
-                log.info("User modify success.");
+                log.debug("User modify success.");
                 return new ResponseEntity<>(new Response<>(true, null, 0, null), HttpStatus.OK);
             } catch (Exception e) {
                 log.error("User modify error: User not found." + e.getMessage());
@@ -312,7 +321,7 @@ public class UserController {
     public ResponseEntity<Response<Void>> deleteUser(HttpServletRequest request, HttpServletResponse response) {
         try {
             try {
-                User user = getCurrentUser(request, response);
+                User user = getCurrentUser(request, response, userService, rememberMeService);
 
                 // delete remember-me cookie
                 rememberMeService.logout(request, response, null);
@@ -320,7 +329,7 @@ public class UserController {
                 // delete user
                 userService.removeById(user);
 
-                log.info("User delete success.");
+                log.debug("User delete success.");
                 return new ResponseEntity<>(new Response<>(true, null, 0, null), HttpStatus.OK);
             } catch (Exception e) {
                 log.error("User delete error: User not found." + e.getMessage());
@@ -353,6 +362,8 @@ public class UserController {
         private String userName;
         private String email;
         private String[] history;
+        private String[] like;
+        private String[] dislike;
     }
 
     @Data

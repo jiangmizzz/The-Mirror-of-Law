@@ -65,6 +65,7 @@ export default function SearchBox(props: {
 
   // 关闭抽屉
   const onClose = () => {
+    setFetchAiData(false);
     setAi(false);
   };
 
@@ -86,33 +87,44 @@ export default function SearchBox(props: {
   interface AiExtractResponse {
     res: string;
   }
-  // 使用 useSWR 发送请求
-  console.log("Input value:" + input);
+
+  const [fetchAiData, setFetchAiData] = useState(false);
+
   const { data: AIdata, error: AIerror } = useSWR<AiExtractResponse>(
-    `/ai/extract?input=${input}`,
+    fetchAiData && input ? `/ai/extract?input=${input}` : null,
     getFetcher
     // {
     //   refreshInterval: 1000,
     // }
   );
 
-  console.log("AI extract result:" + AIdata);
-
-  // 当获取 AI 摘要成功时，更新 chatMessages
+  // 在 useEffect 钩子中处理 AI 服务
   useEffect(() => {
-    if (AIdata) {
+    if (fetchAiData && AIdata) {
       setChatMessages((prevMessages) => [
         ...prevMessages,
         { content: AIdata.toString(), type: "ai" },
       ]);
     }
-  }, [AIdata]);
+  }, [fetchAiData, AIdata]);
 
-  // 当获取 AI 摘要失败时，显示错误信息
-  if (AIerror) {
-    console.error("Failed to fetch AI summary:", AIerror);
-    message.error("获取 AI 摘要失败！");
-  }
+  // 处理错误
+  useEffect(() => {
+    if (AIerror) {
+      console.error("Failed to fetch AI summary:", AIerror);
+      message.error("获取 AI 摘要失败！");
+    }
+  }, [AIerror]);
+
+  const handleAIService = () => {
+    // 当用户点击抽屉时调用此函数
+    console.log("Input value:" + input);
+    if (!input) {
+      return;
+    }
+    setFetchAiData(true);
+    setAi(true);
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputValueAI(e.target.value);
@@ -313,11 +325,9 @@ export default function SearchBox(props: {
         {/* 用一种抽象的方法判断AI图标在不同页面的放置位置 */}
         {props.width >= 500 && (
           <Tooltip title="AI辅助" overlayStyle={{ fontSize: "12px" }}>
-            <img
-              src={aiIcon}
-              className="search-ai-img"
-              onClick={() => setAi(true)}
-            />
+            <div onClick={handleAIService}>
+              <img src={aiIcon} className="search-ai-img" />
+            </div>
           </Tooltip>
         )}
         <Drawer
@@ -325,6 +335,7 @@ export default function SearchBox(props: {
           placement="right"
           onClose={onClose}
           open={ifAi}
+          maskClosable={false} // 不能通过点击其他区域来关闭抽屉
           extra={
             <Space>
               <Button
@@ -454,11 +465,9 @@ export default function SearchBox(props: {
         </Space.Compact>
         {props.width < 500 && (
           <Tooltip title="AI辅助" overlayStyle={{ fontSize: "12px" }}>
-            <img
-              src={aiIcon}
-              className="search-ai-img"
-              onClick={() => setAi(true)}
-            />
+            <div onClick={handleAIService}>
+              <img src={aiIcon} className="search-ai-img" />
+            </div>
           </Tooltip>
         )}
       </Space>

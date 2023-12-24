@@ -34,6 +34,7 @@ const { TextArea } = Input;
 import AI_avatar from "../../assets/iconSideChatDoc.png";
 import WordCloudComponent from "./component/WordCloud.tsx";
 import FireworksComponent from "./component/FireworksComponent.tsx"; // 引入新的子组件
+import { useUserStore } from "../../stores/userStore.tsx";
 
 // TODO， 没有相应接口，mock数据
 async function getAiResponse(userMessage: string): Promise<string> {
@@ -45,22 +46,22 @@ async function getAiResponse(userMessage: string): Promise<string> {
 }
 
 const DetailPage: React.FC = () => {
-  const { id } = useParams(); // 根据url来获取params
+  const { id, type } = useParams(); // 根据url来获取params
   //   const [data, setData] = useState<any>({}); // 初始化为空对象
   const [inputValue, setInputValue] = useState(""); // AI chatbot textarea中的文本（用户输入的信息）
   const [messageApi, contextHolder] = message.useMessage(); // 全局提示
   const [ifOpen, setOpen] = useState<boolean>(false); // 是否启用AI辅助功能（打开抽屉）
   const [isOpenFloatTooltip, setIsOpenFloatTooltip] = useState(true);
   const [isFireworksOn, setIsFireworksOn] = useState(true); // 是否开启快乐特效（鼠标点击动效）
+  const userStore = useUserStore(); //全局用户状态管理器
+
+  const [detailData, setDetailData] = useState<DetailData | null>(null); // 在 DetailPage 组件中定义一个状态变量用于存储详情数据
   const navigate = useNavigate();
 
   // AI部分
   interface AiSummaryResponse {
     res: string;
   }
-
-  // TODO（协商AI请求类型）
-  const someType = "法律文书";
 
   // 聊天消息的状态
   const [chatMessages, setChatMessages] = useState([
@@ -76,28 +77,39 @@ const DetailPage: React.FC = () => {
     setInputValue("");
   }, [chatMessages]);
 
+  // 是否发起AI请求的开关
+  const [fetchAiData, setFetchAiData] = useState(false);
+  // 是否已经获取AI返回的数据，防止多次请求
+  const [isGetResponse, setIsGetResponse] = useState(false);
+
   // 使用 useSWR 发送请求
-  const { data: AIdata, error: AIerror } = useSWR<AiSummaryResponse>(
-    `/ai/summarize?id=${id}&type=${someType}`,
-    getFetcher
-  );
+  const { data: AIdata, error: AIerror } = useSWR<AiSummaryResponse>(() => {
+    if (!fetchAiData || isGetResponse) {
+      // 设置条件防止发送多次请求
+      return false;
+    }
+    return "/ai/summarize?id=" + id + "&type=" + type;
+  }, getFetcher);
   console.log("AI summary result:" + AIdata);
 
   // 当获取 AI 摘要成功时，更新 chatMessages
   useEffect(() => {
-    if (AIdata) {
+    if (fetchAiData && AIdata) {
+      setIsGetResponse(true);
       setChatMessages((prevMessages) => [
         ...prevMessages,
-        { content: AIdata.res, type: "ai" },
+        { content: AIdata.toString(), type: "ai" },
       ]);
     }
-  }, [AIdata]);
+  }, [fetchAiData, AIdata]);
 
   // 当获取 AI 摘要失败时，显示错误信息
-  if (AIerror) {
-    console.error("Failed to fetch AI summary:", AIerror);
-    message.error("获取 AI 摘要失败！");
-  }
+  useEffect(() => {
+    if (AIerror) {
+      console.error("Failed to fetch AI summary:", AIerror);
+      message.error("获取 AI 摘要失败！");
+    }
+  }, [AIerror]);
 
   // 处理用户输入并获取 AI 响应
   const handleUserInput = async () => {
@@ -137,10 +149,12 @@ const DetailPage: React.FC = () => {
 
   // 打开抽屉（AI辅助功能）
   const showDrawer = () => {
+    setFetchAiData(true);
     setOpen(true);
   };
   // 关闭抽屉
   const onClose = () => {
+    setFetchAiData(false);
     setOpen(false);
   };
 
@@ -178,14 +192,15 @@ const DetailPage: React.FC = () => {
     resultType: number;
     link: string;
   }
-  // 调用SWR hook来获取详情页的数据
-  const { data, error, isLoading } = useSWR<DetailData>(
-    `/search/detail?id=${id}`,
-    getFetcher,
-    {
-      refreshInterval: 1000,
+
+  const [isGetDetail, setIsGetDetail] = useState(false);
+  // 调用SWR hook来获取详情页的数据 （判断请求条件）
+  const { data, error, isLoading } = useSWR<DetailData>(() => {
+    if (isGetDetail) {
+      return false;
     }
-  );
+    return "/search/detail?id=" + id;
+  }, getFetcher);
 
   // 显示正在加载的message
   const showLoading = () => {
@@ -199,10 +214,20 @@ const DetailPage: React.FC = () => {
   };
 
   // 如果有错误，显示错误信息
-  if (error) {
-    console.error("Failed to fetch data:", error);
-    message.error("加载失败！");
-  }
+  useEffect(() => {
+    if (error) {
+      console.error("Failed to fetch data:", error);
+      message.error("加载失败！");
+    }
+  }, [error]);
+
+  // 当获取 详情信息 成功时，更新 isGetDetail 和 detailData
+  useEffect(() => {
+    if (data) {
+      setIsGetDetail(true);
+      setDetailData(data); // 更新详情数据
+    }
+  }, [data]);
 
   // 在加载状态下显示 loading 界面
   if (isLoading) {
@@ -231,7 +256,7 @@ const DetailPage: React.FC = () => {
     );
   }
 
-  if (!data) {
+  if (!detailData) {
     return (
       <div className="skeleton-box">
         <Card
@@ -250,9 +275,9 @@ const DetailPage: React.FC = () => {
     );
   }
 
-  const { title, source, publishTime, feedbackCnt, content, link } = data;
+  const { title, source, publishTime, feedbackCnt, content, link } = detailData;
   // 显示调试信息
-  console.log(data);
+  console.log(detailData);
 
   // 正常显示页面
   return (
@@ -260,25 +285,29 @@ const DetailPage: React.FC = () => {
       {/* 鼠标点击动效组件 */}
       <FireworksComponent isOpen={isFireworksOn} />
       <div className="left-box">
-        <Card>
-          {
-            <div className="world-cloud">
-              <WordCloudComponent />
-            </div>
-          }
-        </Card>
-        <Card style={{ marginTop: "20px" }}>
-          {
-            <div className="feedback-box">
-              <Typography.Title level={5}>您对这篇文档的评价</Typography.Title>
-              <ThumbButtons
-                id={id || ""} // 如果 id 是 undefined，则使用空字符串(TODO)
-                initialLikes={feedbackCnt.likes}
-                initialDislikes={feedbackCnt.dislikes}
-              />
-            </div>
-          }
-        </Card>
+        <div className="left-sticky-box">
+          <Card>
+            {
+              <div className="world-cloud">
+                <WordCloudComponent id={id} type={type} />
+              </div>
+            }
+          </Card>
+          <Card style={{ marginTop: "20px" }}>
+            {
+              <div className="feedback-box">
+                <Typography.Title level={5}>
+                  您对这篇文档的评价
+                </Typography.Title>
+                <ThumbButtons
+                  id={id ?? -1} // 如果 id 是 undefined，则使用空字符串(TODO)
+                  initialLikes={feedbackCnt.likes}
+                  initialDislikes={feedbackCnt.dislikes}
+                />
+              </div>
+            }
+          </Card>
+        </div>
       </div>
       <div className="right-box">
         {contextHolder}
@@ -317,7 +346,7 @@ const DetailPage: React.FC = () => {
                 </div>
                 <Space>
                   <BulbTwoTone twoToneColor="#7464FA" />
-                  <a href={data.link} target="_blank" rel="noopener noreferrer">
+                  <a href={link} target="_blank" rel="noopener noreferrer">
                     查看原文
                   </a>
                 </Space>
@@ -349,7 +378,11 @@ const DetailPage: React.FC = () => {
                 icon={<CustomerServiceOutlined />}
                 badge={{ dot: true }}
               >
-                <Tooltip title="快乐特效开启" placement="right" color="#7464FA">
+                <Tooltip
+                  title="开启/关闭快乐特效"
+                  placement="right"
+                  color="#7464FA"
+                >
                   <FloatButton
                     badge={{ dot: true }}
                     icon={<SmileOutlined />}
