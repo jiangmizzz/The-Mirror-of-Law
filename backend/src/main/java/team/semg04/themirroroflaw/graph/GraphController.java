@@ -82,6 +82,7 @@ public class GraphController {
         try {
             Graph graph = graphService.getByValue(input);
             if (graph == null) {
+                log.warn("Graph not found: {}", input);
                 return new ResponseEntity<>(new Response<>(false, null, HttpStatus.NOT_FOUND.value(), "Center not " +
                         "found."), HttpStatus.NOT_FOUND);
             }
@@ -95,7 +96,7 @@ public class GraphController {
             Queue<ResponseNodeInfo> nextQueue = new LinkedList<>();
             curQueue.add(center);
             visited.add(graph.getId());
-            for (int i = 0; i < depth; i++) {
+            for (int i = 0; i < depth && !curQueue.isEmpty(); i++) {
                 while (!curQueue.isEmpty()) {
                     ResponseNodeInfo curNode = curQueue.poll();
 
@@ -111,7 +112,9 @@ public class GraphController {
                             nextQueue.add(child);
                         }
                     }
-                    curNode.setChildren(children);
+                    if (!children.isEmpty()) {
+                        curNode.setChildren(children);
+                    }
                 }
                 curQueue = nextQueue;
                 nextQueue = new LinkedList<>();

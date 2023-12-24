@@ -8,6 +8,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,19 +21,21 @@ import org.springframework.data.elasticsearch.core.query.SearchTemplateQuery;
 import org.springframework.data.elasticsearch.core.script.Script;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import team.semg04.themirroroflaw.Response;
 import team.semg04.themirroroflaw.search.entity.Laws;
+import team.semg04.themirroroflaw.user.entity.User;
+import team.semg04.themirroroflaw.user.service.UserService;
+import team.semg04.themirroroflaw.user.utils.RememberMeService;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
 import static java.lang.System.exit;
+import static team.semg04.themirroroflaw.user.UserController.getCurrentUser;
 
 @Slf4j
 @RestController
@@ -40,6 +44,19 @@ import static java.lang.System.exit;
 public class SearchController {
 
     private ElasticsearchOperations elasticsearchOperations;
+    private UserService userService;
+
+    private RememberMeService rememberMeService;
+
+    @Autowired
+    public void setUserService(UserService userService) {
+        this.userService = userService;
+    }
+
+    @Autowired
+    public void setRememberMeService(RememberMeService rememberMeService) {
+        this.rememberMeService = rememberMeService;
+    }
 
     @Autowired
     public void setElasticsearchOperations(ElasticsearchOperations elasticsearchOperations) {
@@ -148,20 +165,20 @@ public class SearchController {
                         }""").build();
         try {
             elasticsearchOperations.deleteScript("search_by_all");
-            log.info("Delete script success.");
+            log.debug("Delete script success.");
         } catch (Exception e) {
             log.error("Delete script error: " + e.getMessage());
         }
         try {
             elasticsearchOperations.deleteScript("search_by_single");
-            log.info("Delete script success.");
+            log.debug("Delete script success.");
         } catch (Exception e) {
             log.error("Delete script error: " + e.getMessage());
         }
         try {
             elasticsearchOperations.putScript(allScript);
             elasticsearchOperations.putScript(singleScript);
-            log.info("Put script success.");
+            log.debug("Put script success.");
         } catch (Exception e) {
             log.error("Put script error: " + e.getMessage());
             exit(-1);
@@ -198,16 +215,17 @@ public class SearchController {
                                                            @RequestParam(name = "pageSize", required = false,
                                                                    defaultValue = "10") Integer pageSize,
                                                            @RequestParam(name = "pageNumber", required = false,
-                                                                   defaultValue = "0") Integer pageNumber) {
+                                                                   defaultValue = "0") Integer pageNumber,
+                                                           HttpServletRequest request, HttpServletResponse response) {
         try {
             // Check parameters
             if (pageSize <= 0 || pageSize > 50) {
-                log.error("Get search result list error: Invalid pageSize. pageSize: " + pageSize);
+                log.warn("Get search result list error: Invalid pageSize. pageSize: " + pageSize);
                 return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(),
                         "Invalid pageSize. PageSize should be in range [1, 50]."), HttpStatus.BAD_REQUEST);
             }
             if (pageNumber < 0 || pageNumber + pageSize > 10000) {
-                log.error("Get search result list error: Invalid pageNumber. pageNumber: " + pageNumber);
+                log.warn("Get search result list error: Invalid pageNumber. pageNumber: " + pageNumber);
                 return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(),
                         "Invalid pageNumber. PageNumber should be in range [0, 10000 - pageSize]."),
                         HttpStatus.BAD_REQUEST);
@@ -268,14 +286,44 @@ public class SearchController {
                         resultItem.setFeedbackCnt(new FeedbackCnt());
                         resultItem.getFeedbackCnt().setLikes(data.getContent().getLike());
                         resultItem.getFeedbackCnt().setDislikes(data.getContent().getDislike());
+                        resultItem.setScore(data.getScore());
                         searchList.getResults().add(resultItem);
                     }
                 } else if (typeInt == ResultType.JUDGEMENT.ordinal()) {
+                    log.warn("Get search result list error: Not implemented. Type: " + typeInt);
                     return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(), "Not " +
                             "implemented."), HttpStatus.BAD_REQUEST);
                 }
             }
-            log.info("Get search result list success. Total: " + searchList.getTotal());
+
+            // Sort result list and get the first pageSize items
+            // if score is the same, sort by date
+            searchList.getResults().sort((o1, o2) -> {
+                if (o1.getScore().equals(o2.getScore())) {
+                    return o2.getDate().compareTo(o1.getDate());
+                } else {
+                    return o2.getScore().compareTo(o1.getScore());
+                }
+            });
+            searchList.setResults(searchList.getResults().subList(0, Math.min(searchList.getResults().size(),
+                    pageSize)));
+
+            // add input into user history
+            User user = null;
+            try {
+                user = getCurrentUser(request, response, userService, rememberMeService);
+            } catch (Exception e) {
+                log.debug("Get personal history error: User not found." + e.getMessage());
+            }
+            if (user != null) {
+                LinkedHashSet<String> history = user.getHistoryAsSet();
+                history.add(input);
+                user.setHistoryFromSet(history);
+                userService.updateById(user);
+                log.debug("Add input into user history success. Input: " + input);
+            }
+
+            log.debug("Get search result list success. Total: " + searchList.getTotal());
             return new ResponseEntity<>(new Response<>(true, searchList, 0, ""), HttpStatus.OK);
         } catch (Exception e) {
             log.error("Get search result list error: " + e.getMessage());
@@ -286,7 +334,8 @@ public class SearchController {
 
     @Operation(summary = "结果详情展示", description = "用户点击搜索结果列表中的某一条后，即可进入详情页查看详细内容，这些内容应以合适的格式整理并呈现。")
     @Parameters({
-            @Parameter(name = "id", description = "内容的id")
+            @Parameter(name = "id", description = "内容的id"),
+            @Parameter(name = "type", description = "内容的类型")
     })
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "成功"),
@@ -296,28 +345,141 @@ public class SearchController {
             @Schema(implementation = Response.class)))
     })
     @GetMapping("/detail")
-    public ResponseEntity<Response<Detail>> searchDetail(@RequestParam(name = "id") String id) {
+    public ResponseEntity<Response<Detail>> searchDetail(@RequestParam(name = "id") String id,
+                                                         @RequestParam Integer type) {
         try {
             Detail detail = new Detail();
-            Laws laws = elasticsearchOperations.get(id, Laws.class);
-            if (laws == null) {
-                log.error("Get search result detail error: LawsData not found. Id: " + id);
-                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.NOT_FOUND.value(),
-                        "LawsData not found."), HttpStatus.NOT_FOUND);
+            if (type == ResultType.LAW.ordinal()) {
+                Laws laws = elasticsearchOperations.get(id, Laws.class);
+                if (laws == null) {
+                    log.warn("Get search result detail error: LawsData not found. Id: " + id);
+                    return new ResponseEntity<>(new Response<>(false, null, HttpStatus.NOT_FOUND.value(),
+                            "LawsData not found."), HttpStatus.NOT_FOUND);
+                }
+                detail.setTitle(laws.getTitle());
+                detail.setSource(laws.getOffice());
+                detail.setPublishTime(laws.getPublish());
+                detail.setFeedbackCnt(new FeedbackCnt());
+                detail.getFeedbackCnt().setLikes(laws.getLike());
+                detail.getFeedbackCnt().setDislikes(laws.getDislike());
+                detail.setContent(laws.getContent());
+                detail.setResultType(ResultType.LAW.ordinal());
+                detail.setLink(laws.getUrl());
+                log.debug("Get search result detail success. Id: " + id);
+                return new ResponseEntity<>(new Response<>(true, detail, 0, ""), HttpStatus.OK);
+            } else if (type == ResultType.JUDGEMENT.ordinal()) {
+                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(), "Not " +
+                        "implemented."), HttpStatus.BAD_REQUEST);
+            } else {
+                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(), "Invalid " +
+                        "type."), HttpStatus.BAD_REQUEST);
             }
-            detail.setTitle(laws.getTitle());
-            detail.setSource(laws.getOffice());
-            detail.setPublishTime(laws.getPublish());
-            detail.setFeedbackCnt(new FeedbackCnt());
-            detail.getFeedbackCnt().setLikes(laws.getLike());
-            detail.getFeedbackCnt().setDislikes(laws.getDislike());
-            detail.setContent(laws.getContent());
-            detail.setResultType(ResultType.LAW.ordinal());
-            detail.setLink(laws.getUrl());
-            log.info("Get search result detail success. Id: " + id);
-            return new ResponseEntity<>(new Response<>(true, detail, 0, ""), HttpStatus.OK);
         } catch (Exception e) {
             log.error("Get search result detail error: " + e.getMessage());
+            return new ResponseEntity<>(new Response<>(false, null, HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                    "Internal server error."), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @Operation(summary = "用户反馈", description = "用户对搜索结果的反馈，包括点赞和点踩。")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "成功"),
+            @ApiResponse(responseCode = "404", description = "内容不存在", content = @Content(schema =
+            @Schema(implementation = Response.class))),
+            @ApiResponse(responseCode = "500", description = "服务器内部错误", content = @Content(schema =
+            @Schema(implementation = Response.class)))
+    })
+    @PostMapping("/feedback")
+    public ResponseEntity<Response<Integer>> feedback(@RequestBody Feedback feedback, HttpServletRequest request,
+                                                      HttpServletResponse response) {
+        try {
+            // update in user's feedback
+            User user;
+            FeedbackType feedbackType;
+            try {
+                user = getCurrentUser(request, response, userService, rememberMeService);
+            } catch (Exception e) {
+                log.warn("Feedback error: User not found." + e.getMessage());
+                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.UNAUTHORIZED.value(), "Not logged " +
+                        "in yet!"), HttpStatus.UNAUTHORIZED);
+            }
+            if (feedback.getFeedback()) {
+                if (user.getLikeAsList().contains(feedback.getId())) {
+                    feedbackType = FeedbackType.CANCEL_LIKE;
+                    List<String> like = user.getLikeAsList();
+                    like.remove(feedback.getId());
+                    user.setLikeFromList(like);
+                } else if (user.getDislikeAsList().contains(feedback.getId())) {
+                    feedbackType = FeedbackType.DISLIKE_TO_LIKE;
+                    List<String> dislike = user.getDislikeAsList();
+                    dislike.remove(feedback.getId());
+                    user.setDislikeFromList(dislike);
+                    List<String> like = user.getLikeAsList();
+                    like.add(feedback.getId());
+                    user.setLikeFromList(like);
+                } else {
+                    feedbackType = FeedbackType.LIKE;
+                    List<String> like = user.getLikeAsList();
+                    like.add(feedback.getId());
+                    user.setLikeFromList(like);
+                }
+            } else {
+                if (user.getDislikeAsList().contains(feedback.getId())) {
+                    feedbackType = FeedbackType.CANCEL_DISLIKE;
+                    List<String> dislike = user.getDislikeAsList();
+                    dislike.remove(feedback.getId());
+                    user.setDislikeFromList(dislike);
+                } else if (user.getLikeAsList().contains(feedback.getId())) {
+                    feedbackType = FeedbackType.LIKE_TO_DISLIKE;
+                    List<String> like = user.getLikeAsList();
+                    like.remove(feedback.getId());
+                    user.setLikeFromList(like);
+                    List<String> dislike = user.getDislikeAsList();
+                    dislike.add(feedback.getId());
+                    user.setDislikeFromList(dislike);
+                } else {
+                    feedbackType = FeedbackType.DISLIKE;
+                    List<String> dislike = user.getDislikeAsList();
+                    dislike.add(feedback.getId());
+                    user.setDislikeFromList(dislike);
+                }
+            }
+            userService.updateById(user);
+
+            // update in Elasticsearch
+            if (feedback.getType() == ResultType.LAW.ordinal()) {
+                Laws laws = elasticsearchOperations.get(feedback.getId(), Laws.class);
+                if (laws == null) {
+                    log.warn("Feedback error: LawsData not found. Id: " + feedback.getId());
+                    return new ResponseEntity<>(new Response<>(false, null, HttpStatus.NOT_FOUND.value(),
+                            "LawsData not found."), HttpStatus.NOT_FOUND);
+                }
+                switch (feedbackType) {
+                    case LIKE -> laws.setLike(laws.getLike() + 1);
+                    case DISLIKE -> laws.setDislike(laws.getDislike() + 1);
+                    case CANCEL_LIKE -> laws.setLike(laws.getLike() - 1);
+                    case CANCEL_DISLIKE -> laws.setDislike(laws.getDislike() - 1);
+                    case LIKE_TO_DISLIKE -> {
+                        laws.setLike(laws.getLike() - 1);
+                        laws.setDislike(laws.getDislike() + 1);
+                    }
+                    case DISLIKE_TO_LIKE -> {
+                        laws.setLike(laws.getLike() + 1);
+                        laws.setDislike(laws.getDislike() - 1);
+                    }
+                }
+                elasticsearchOperations.save(laws);
+                log.debug("Feedback success. Id: " + feedback.getId());
+                return new ResponseEntity<>(new Response<>(true, feedbackType.ordinal(), 0, ""), HttpStatus.OK);
+            } else if (feedback.getType() == ResultType.JUDGEMENT.ordinal()) {
+                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(), "Not " +
+                        "implemented."), HttpStatus.BAD_REQUEST);
+            } else {
+                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(), "Invalid " +
+                        "type."), HttpStatus.BAD_REQUEST);
+            }
+        } catch (Exception e) {
+            log.error("Feedback error: " + e.getMessage());
             return new ResponseEntity<>(new Response<>(false, null, HttpStatus.INTERNAL_SERVER_ERROR.value(),
                     "Internal server error."), HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -329,6 +491,17 @@ public class SearchController {
 
     public enum ResultType {
         LAW, JUDGEMENT
+    }
+
+    public enum FeedbackType {
+        LIKE, DISLIKE, CANCEL_LIKE, CANCEL_DISLIKE, LIKE_TO_DISLIKE, DISLIKE_TO_LIKE
+    }
+
+    @Data
+    public static class Feedback {
+        private String id;
+        private Integer type;
+        private Boolean feedback;
     }
 
     @Data
@@ -356,6 +529,7 @@ public class SearchController {
             private Integer resultType;
             private String source;
             private FeedbackCnt feedbackCnt;
+            private Float score;
         }
     }
 
