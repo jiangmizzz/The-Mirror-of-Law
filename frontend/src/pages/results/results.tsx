@@ -26,9 +26,11 @@ import logo from "../../assets/main-logo.svg";
 import type { SearchProps } from "../../vite-env";
 import { getFetcher } from "../../utils";
 import useSWR from "swr";
+import { useUserStore } from "../../stores/userStore.tsx";
 
 export default function ResultsPage() {
   const location = useLocation(); //在react router v6 中模拟页面栈
+  const userStore = useUserStore();
   const navigate = useNavigate();
   const resultTypeMap = new Map([
     ["法律法规", "0"],
@@ -94,7 +96,8 @@ export default function ResultsPage() {
       pageSize: String(pageSize),
       pageNumber: String(currentPage),
     };
-    // console.log(new URLSearchParams(requestParams).toString());
+    //添加新的搜索内容到history中
+    userStore.addHistory(requestParams.input);
     setParamsStr(new URLSearchParams(requestParams).toString());
     setMapParams({
       input: requestParams.input,

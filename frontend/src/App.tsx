@@ -73,7 +73,9 @@ const App: React.FC = () => {
           userData.id,
           userData.userName,
           userData.email,
-          userData.history
+          userData.history,
+          userData.like,
+          userData.dislike
         );
       }
     }
@@ -246,7 +248,14 @@ const App: React.FC = () => {
         }}
       >
         {contextHolder}
-        {ifPop && <LogPop type={popType} closePop={() => setIfPop(false)} />}
+        {ifPop && (
+          <LogPop
+            type={popType}
+            userName={popType == "edit-info" ? userStore.userName : ""}
+            email={popType == "edit-info" ? userStore.email : ""}
+            closePop={() => setIfPop(false)}
+          />
+        )}
         <Layout style={{ minHeight: "100vh" }}>
           <Header
             style={{
