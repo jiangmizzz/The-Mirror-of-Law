@@ -172,8 +172,13 @@ public class UserController {
         try {
             try {
                 User user = getCurrentUser(request, response, userService, rememberMeService);
+                List<String> history = List.copyOf(user.getHistoryAsSet());
+                if (history.size() > 20) {
+                    history = history.subList(history.size() - 20, history.size());
+                }
                 UserInfo userInfo = new UserInfo(user.getId(), user.getUsername(), user.getEmail(),
-                        user.getHistoryAsSet().toArray(new String[0]), user.getLikeAsList().toArray(new String[0]),
+                        history.toArray(new String[0]),
+                        user.getLikeAsList().toArray(new String[0]),
                         user.getDislikeAsList().toArray(new String[0]));
                 log.debug("Get user info success. Username: " + user.getUsername());
                 return new ResponseEntity<>(new Response<>(true, userInfo, 0, null), HttpStatus.OK);
