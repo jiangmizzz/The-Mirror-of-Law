@@ -9,6 +9,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -20,7 +21,7 @@ public class LawFrequencyAnalyzer {
         frequencyAnalyzer.setMinWordLength(2);
         frequencyAnalyzer.setStopWords(getStopWordList());
         frequencyAnalyzer.setWordTokenizer(new ChineseWordTokenizer());
-        List<WordFrequency> wordFrequencies = frequencyAnalyzer.load(List.of(text));
+        List<WordFrequency> wordFrequencies = frequencyAnalyzer.load(Arrays.asList(text.split("\n")));
         List<Map<String, Object>> rst = new ArrayList<>();
         for(WordFrequency word : wordFrequencies) {
             rst.add(Map.of("name", word.getWord(), "value", word.getFrequency()));
