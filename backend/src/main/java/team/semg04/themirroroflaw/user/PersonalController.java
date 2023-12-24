@@ -22,6 +22,8 @@ import team.semg04.themirroroflaw.user.entity.User;
 import team.semg04.themirroroflaw.user.service.UserService;
 import team.semg04.themirroroflaw.user.utils.RememberMeService;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static team.semg04.themirroroflaw.user.UserController.getCurrentUser;
@@ -55,12 +57,13 @@ public class PersonalController {
             @Schema(implementation = Response.class)))
     })
     @GetMapping("/history")
-    public ResponseEntity<Response<List<String>>> history(@RequestParam Integer reqNumber, HttpServletRequest request
+    public ResponseEntity<Response<List<String>>> history(@RequestParam(required = false, defaultValue = "10") Integer reqNumber, HttpServletRequest request
             , HttpServletResponse response) {
         try {
             try {
                 User user = getCurrentUser(request, response, userService, rememberMeService);
-                List<String> history = List.copyOf(user.getHistoryAsSet());
+                List<String> history = new ArrayList<>(user.getHistoryAsSet());
+                Collections.reverse(history);
                 log.debug("Get personal history: " + history);
                 return new ResponseEntity<>(new Response<>(true, history.subList(0, Math.min(history.size(), reqNumber))
                         , 0, "Success."), HttpStatus.OK);
