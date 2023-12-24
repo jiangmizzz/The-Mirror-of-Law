@@ -1,11 +1,11 @@
 import React, { useRef, useEffect } from "react";
 import mojs from "@mojs/core";
 
-interface FireworksProps {
+interface ClickProps {
   isOpen: boolean;
 }
 
-const FireworksComponent: React.FC<FireworksProps> = ({ isOpen }) => {
+const ClickComponent: React.FC<ClickProps> = ({ isOpen }) => {
   const burstRef = useRef<any>(null);
   //   const heartBounce = useRef<any>(1);
 
@@ -153,4 +153,4 @@ const FireworksComponent: React.FC<FireworksProps> = ({ isOpen }) => {
   return <div />;
 };
 
-export default FireworksComponent;
+export default ClickComponent;

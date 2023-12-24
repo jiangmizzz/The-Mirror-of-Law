@@ -3,7 +3,7 @@ import { WordCloud } from "@ant-design/plots";
 import maskImg from "../../../assets/iconSideChatDoc.png";
 import useSWR from "swr";
 import { getFetcher } from "../../../utils";
-import { Card, Divider, Empty, Skeleton, Spin, message } from "antd";
+import { Card, Empty, Skeleton, Spin, message } from "antd";
 
 // // 示例数据
 // const data = [
@@ -200,8 +200,8 @@ interface WorldCloudDataList {
 
 // Props 接口
 interface CloudProps {
-  id: number; // 从父组件传递的文档id
-  type: string; //文档类型，可以再进行规定
+  id: string; // 从父组件传递的文档id
+  type: number; //文档类型，可以再进行规定
 }
 
 const WordCloudComponent: React.FC<CloudProps> = ({ id, type }) => {
@@ -330,8 +330,8 @@ const WordCloudComponent: React.FC<CloudProps> = ({ id, type }) => {
     colorField: "name",
     wordStyle: {
       fontFamily: "Verdana",
-      fontSize: [13, 40],
-      rotation: [-Math.PI / 2, Math.PI / 2],
+      fontSize: [13, 40] as [number, number], // 将 number[] 类型转换为 [number, number]
+      rotation: [-Math.PI / 2, Math.PI / 2] as [number, number], // 将 number[] 类型转换为 [number, number]
       rotateRatio: 0.5,
     },
     shape: "cardioid",

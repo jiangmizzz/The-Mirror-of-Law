@@ -333,7 +333,7 @@ export default function SearchBox(props: {
           </Tooltip>
         )}
         <Drawer
-          title="AI智能文档总结"
+          title="AI智能关键词提取"
           placement="right"
           onClose={onClose}
           open={ifAi}
