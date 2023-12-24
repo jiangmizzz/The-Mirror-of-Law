@@ -177,8 +177,12 @@ public class SpringSecurityConfig {
             // get UserInfo
             String id = authentication.getName();
             team.semg04.themirroroflaw.user.entity.User user = userService.getById(id);
+            List<String> history = List.copyOf(user.getHistoryAsSet());
+            if (history.size() > 20) {
+                history = history.subList(history.size() - 20, history.size());
+            }
             UserController.UserInfo userInfo = new UserController.UserInfo(user.getId(), user.getUsername(),
-                    user.getEmail(), user.getHistoryAsSet().toArray(new String[0]),
+                    user.getEmail(), history.toArray(new String[0]),
                     user.getLikeAsList().toArray(new String[0]), user.getDislikeAsList().toArray(new String[0]));
 
             PrintWriter out = response.getWriter();
