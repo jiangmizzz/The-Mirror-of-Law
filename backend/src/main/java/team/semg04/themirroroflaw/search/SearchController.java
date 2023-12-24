@@ -346,7 +346,7 @@ public class SearchController {
     })
     @GetMapping("/detail")
     public ResponseEntity<Response<Detail>> searchDetail(@RequestParam(name = "id") String id,
-                                                         @RequestParam Integer type) {
+                                                         @RequestParam(name = "type") Integer type) {
         try {
             Detail detail = new Detail();
             if (type == ResultType.LAW.ordinal()) {
