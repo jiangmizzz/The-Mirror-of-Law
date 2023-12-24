@@ -24,11 +24,14 @@ import KnowledgeMap from "./component/KnowledgeMap";
 import { useLocation, useNavigate } from "react-router-dom";
 import logo from "../../assets/main-logo.svg";
 import type { SearchProps } from "../../vite-env";
-import { getFetcher } from "../../utils";
-import useSWR from "swr";
+import { getFetcher, postFetcher } from "../../utils";
+import useSWR, { mutate } from "swr";
 import { useUserStore } from "../../stores/userStore.tsx";
+import type { Response } from "../../vite-env";
+import useSWRMutation from "swr/mutation";
 
 export default function ResultsPage() {
+  const [messageApi, contextHolder] = message.useMessage();
   const location = useLocation(); //在react router v6 中模拟页面栈
   const userStore = useUserStore();
   const navigate = useNavigate();
@@ -128,6 +131,7 @@ export default function ResultsPage() {
     data: resultsData,
     error: resultsError,
     isLoading: resultLoading,
+    mutate,
   } = useSWR<{ results: ResultItemProps[]; total: number }, Error>(
     () => {
       //null, undefined, false, '' 均不会发起请求
@@ -139,6 +143,7 @@ export default function ResultsPage() {
       revalidateOnFocus: true, //聚焦时重新数据验证，保证数据实时性
     }
   );
+
   //图谱深度更改时重新获取图谱
   useEffect(() => {
     if (mapParams) {
@@ -158,6 +163,18 @@ export default function ResultsPage() {
     if (mapParams == null) return false;
     return "/graph/get?" + new URLSearchParams(mapParams).toString();
   }, getFetcher);
+
+  //用户反馈的trigger
+  const { trigger: feedbackTrigger } = useSWRMutation<
+    Response<number>,
+    Error,
+    string,
+    {
+      id: string;
+      type: number;
+      feedback: boolean;
+    }
+  >("/search/feedback", postFetcher);
 
   //使用图谱节点的文本重新搜索
   function nodeSearch(text: string) {
@@ -199,8 +216,62 @@ export default function ResultsPage() {
     }
   }
 
+  //点赞/点踩处理函数，应该是异步的
+  async function handlefeedback(id: string, type: number, action: boolean) {
+    //未登录者不可评价
+    if (!userStore.ifLogin) {
+      message.info("请先登录再评价~");
+      return;
+    }
+    const feedbackRes = await feedbackTrigger({
+      id: id,
+      type: type,
+      feedback: action,
+    });
+    if (feedbackRes.success) {
+      //这同样是一个状态变量，因此具有状态快照的性质
+      messageApi.open({
+        key: "loading",
+        type: "loading",
+        content: "正在递交用户反馈...",
+        duration: 0,
+      });
+      //数据库更新似乎不及时
+      setTimeout(() => {
+        messageApi.destroy("loading");
+        switch (feedbackRes.data) {
+          case 5:
+          case 0:
+            message.success("点赞成功, 感谢喜欢此内容!");
+            break;
+          case 4:
+          case 1:
+            message.success("点踩成功, 感谢您的反馈!");
+            break;
+          case 2:
+            message.success("取消点赞成功!");
+            break;
+          case 3:
+            message.success("取消点踩成功!");
+            break;
+          default:
+            message.error("后端返回结果有误!");
+        }
+        userStore.changeLikes(feedbackRes.data!, id);
+        mutate();
+      }, 1000);
+    } else {
+      message.error(
+        "发生未知错误: " +
+          feedbackRes.errorCode +
+          ": " +
+          feedbackRes.errorMessage
+      );
+    }
+  }
+
   interface ResultItemProps {
-    id: number; //唯一标识符
+    id: string; //唯一标识符
     title: string; //该条结果的标题
     description: string; //内容摘要
     date: string; //内容发布或更新时间，使用 ISO 8601 时间格式
@@ -210,6 +281,7 @@ export default function ResultsPage() {
       likes: number; //点赞数量
       dislikes: number; //点踩数量
     };
+    handlefeedback: (id: string, type: number, action: boolean) => void;
   }
 
   //子组件，单条搜索结果
@@ -229,9 +301,6 @@ export default function ResultsPage() {
           return { img: information, text: "资讯" };
       }
     })();
-    //点赞/点踩处理函数，应该是异步的
-    function handleLike() {}
-    function handleDislike() {}
 
     return (
       <>
@@ -254,16 +323,28 @@ export default function ResultsPage() {
               </Space>
               <Space style={{ marginLeft: "1em" }}>
                 <Button
-                  type="dashed"
+                  type={
+                    userStore.likes.indexOf(props.id) == -1
+                      ? "dashed"
+                      : "primary"
+                  }
                   icon={<LikeOutlined />}
-                  onClick={handleLike}
+                  onClick={() =>
+                    props.handlefeedback(props.id, props.resultType, true)
+                  }
                 >
                   {props.feedbackCnt.likes}
                 </Button>
                 <Button
-                  type="dashed"
+                  type={
+                    userStore.dislikes.indexOf(props.id) == -1
+                      ? "dashed"
+                      : "primary"
+                  }
                   icon={<DislikeOutlined />}
-                  onClick={handleDislike}
+                  onClick={() =>
+                    props.handlefeedback(props.id, props.resultType, false)
+                  }
                 >
                   {props.feedbackCnt.dislikes}
                 </Button>
@@ -362,6 +443,7 @@ export default function ResultsPage() {
 
   return (
     <>
+      {contextHolder}
       {/* {resultsError && <div>Error:{resultsError.message}</div>} */}
       {/* {resultLoading && <div>loading...</div>} */}
       {!resultLoading && !resultsError && (
@@ -394,6 +476,7 @@ export default function ResultsPage() {
                       date={item.date}
                       feedbackCnt={item.feedbackCnt}
                       source={item.source}
+                      handlefeedback={handlefeedback}
                     />
                   );
                 })}

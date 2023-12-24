@@ -86,26 +86,34 @@ export const useUserStore = create<userState>()((set) => ({
         const index: number = state.likes.indexOf(id);
         return {
           //后端无误的话这个index一定不会是-1
-          likes: state.likes.splice(index, 1),
+          likes: state.likes
+            .slice(0, index)
+            .concat(state.likes.slice(index + 1)),
         };
       } else if (actionCode == 3) {
         //取消点踩
         const index: number = state.dislikes.indexOf(id);
         return {
-          dislikes: state.dislikes.splice(index, 1),
+          dislikes: state.dislikes
+            .slice(0, index)
+            .concat(state.dislikes.slice(index + 1)),
         };
       } else if (actionCode == 4) {
         //点赞变为点踩
         const index: number = state.likes.indexOf(id);
         return {
-          likes: state.likes.splice(index, 1),
+          likes: state.likes
+            .slice(0, index)
+            .concat(state.likes.slice(index + 1)),
           dislikes: [...state.dislikes, id],
         };
       } else {
         //点踩变为点赞
         const index: number = state.dislikes.indexOf(id);
         return {
-          dislikes: state.dislikes.splice(index, 1),
+          dislikes: state.dislikes
+            .slice(0, index)
+            .concat(state.dislikes.slice(index + 1)),
           likes: [...state.likes, id],
         };
       }
