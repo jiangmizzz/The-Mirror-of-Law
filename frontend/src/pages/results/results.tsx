@@ -25,7 +25,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import logo from "../../assets/main-logo.svg";
 import type { SearchProps } from "../../vite-env";
 import { getFetcher, postFetcher } from "../../utils";
-import useSWR, { mutate } from "swr";
+import useSWR from "swr";
 import { useUserStore } from "../../stores/userStore.tsx";
 import type { Response } from "../../vite-env";
 import useSWRMutation from "swr/mutation";
@@ -216,11 +216,15 @@ export default function ResultsPage() {
     }
   }
 
+  let isfeedbacking = false;
   //点赞/点踩处理函数，应该是异步的
   async function handlefeedback(id: string, type: number, action: boolean) {
     //未登录者不可评价
     if (!userStore.ifLogin) {
       message.info("请先登录再评价~");
+      return;
+    } else if (isfeedbacking) {
+      message.info("您的操作过于频繁, 请稍后再试~");
       return;
     }
     const feedbackRes = await feedbackTrigger({
@@ -229,13 +233,13 @@ export default function ResultsPage() {
       feedback: action,
     });
     if (feedbackRes.success) {
-      //这同样是一个状态变量，因此具有状态快照的性质
       messageApi.open({
         key: "loading",
         type: "loading",
         content: "正在递交用户反馈...",
         duration: 0,
       });
+      isfeedbacking = true;
       //数据库更新似乎不及时
       setTimeout(() => {
         messageApi.destroy("loading");
@@ -259,6 +263,7 @@ export default function ResultsPage() {
         }
         userStore.changeLikes(feedbackRes.data!, id);
         mutate();
+        isfeedbacking = false;
       }, 1000);
     } else {
       message.error(
@@ -302,6 +307,13 @@ export default function ResultsPage() {
       }
     })();
 
+    //校准时间差
+    function handleTimeOffset(timeStr: string): string {
+      //时差的毫秒数
+      const offset = new Date().getTimezoneOffset() * 60 * 1000;
+      return new Date(new Date(timeStr).getTime() + offset).toLocaleString();
+    }
+
     return (
       <>
         <div>
@@ -318,7 +330,7 @@ export default function ResultsPage() {
               <Space direction="vertical">
                 <div className="result-item-head-source">{props.source}</div>
                 <div className="result-item-head-time">
-                  {new Date(props.date).toLocaleString()}
+                  {handleTimeOffset(props.date)}
                 </div>
               </Space>
               <Space style={{ marginLeft: "1em" }}>
