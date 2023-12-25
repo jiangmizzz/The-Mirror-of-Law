@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import team.semg04.themirroroflaw.Response;
-import team.semg04.themirroroflaw.search.SearchController;
 import team.semg04.themirroroflaw.search.entity.MirrorOfLaw;
 
 @Slf4j
@@ -81,17 +80,17 @@ public class AIController {
     @GetMapping("/summarize")
     public ResponseEntity<Response<String>> summarizeInfo(@RequestParam(name = "id") String id, @RequestParam(name =
             "type") Integer typeInt) {
-        String result = null;
+        String result;
         boolean tooLong = false;
         String tooLongMessage = "文档内容过长，已自动截取部分内容进行总结：\n";
         String sensitiveMessage = "文档可能包含敏感信息，无法进行总结！";
         try {
-            if (typeInt == DocumentType.LAW.ordinal()) {
+            if (typeInt == DocumentType.LAW.ordinal() || typeInt == DocumentType.JUDGEMENT.ordinal()) {
                 MirrorOfLaw laws = elasticsearchOperations.get(id, MirrorOfLaw.class);
                 if (laws == null) {
-                    log.error("Get search result detail error: LawsData not found. Id: " + id);
+                    log.error("Get search result detail error: Document not found. Id: " + id);
                     return new ResponseEntity<>(new Response<>(false, null, HttpStatus.NOT_FOUND.value(),
-                            "LawsData not found."), HttpStatus.NOT_FOUND);
+                            "Document not found."), HttpStatus.NOT_FOUND);
                 }
                 if (laws.getContent().length() >= 4096 - summarizePrompt.length()) {
                     laws.setContent(laws.getContent().substring(0, 4096 - summarizePrompt.length()));
@@ -101,9 +100,9 @@ public class AIController {
                 if (result.isEmpty()) {
                     return new ResponseEntity<>(new Response<>(true, sensitiveMessage, 0, ""), HttpStatus.OK);
                 }
-            } else if (typeInt == SearchController.ResultType.JUDGEMENT.ordinal()) {
-                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(), "Not " +
-                        "implemented."), HttpStatus.BAD_REQUEST);
+            } else {
+                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(), "Invalid " +
+                        "type."), HttpStatus.BAD_REQUEST);
             }
             if (!tooLong) {
                 return new ResponseEntity<>(new Response<>(true, result, 0, ""), HttpStatus.OK);

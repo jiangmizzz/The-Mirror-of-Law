@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.RestController;
 import team.semg04.themirroroflaw.Response;
 import team.semg04.themirroroflaw.search.entity.MirrorOfLaw;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -51,19 +50,19 @@ public class WordFrequencyController {
     })
     @GetMapping("/get")
     public ResponseEntity<Response<List<Map<String, Object>> >> summarizeInfo(@RequestParam(name = "id") String id, @RequestParam(name = "type") Integer typeInt) {
-        List<Map<String, Object>> wordFrequencyList = new ArrayList<>();
+        List<Map<String, Object>> wordFrequencyList;
         try {
-            if(typeInt == DocumentType.LAW.ordinal()) {
+            if(typeInt == DocumentType.LAW.ordinal() || typeInt == DocumentType.JUDGEMENT.ordinal()) {
                 MirrorOfLaw laws = elasticsearchOperations.get(id, MirrorOfLaw.class);
                 if (laws == null) {
-                    log.error("Get search result detail error: LawsData not found. Id: " + id);
+                    log.error("Get search result detail error: Document not found. Id: " + id);
                     return new ResponseEntity<>(new Response<>(false, null, HttpStatus.NOT_FOUND.value(),
-                            "LawsData not found."), HttpStatus.NOT_FOUND);
+                            "Document not found."), HttpStatus.NOT_FOUND);
                 }
                 wordFrequencyList = LawFrequencyAnalyzer.getAnalyzedJson(laws.getContent());
-            } else if (typeInt == SearchController.ResultType.JUDGEMENT.ordinal()) {
-                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(), "Not " +
-                        "implemented."), HttpStatus.BAD_REQUEST);
+            } else {
+                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(), "Invalid " +
+                        "type."), HttpStatus.BAD_REQUEST);
             }
             return new ResponseEntity<>(new Response<>(true, wordFrequencyList, 0, ""), HttpStatus.OK);
 
