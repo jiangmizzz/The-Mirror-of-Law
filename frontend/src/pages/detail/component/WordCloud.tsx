@@ -258,6 +258,7 @@ const WordCloudComponent: React.FC<CloudProps> = ({ id, type }) => {
     showLoading();
     return (
       <div className="skeleton-box">
+        {contextHolder}
         {/* <Card
           style={{
             marginTop: "20px",
