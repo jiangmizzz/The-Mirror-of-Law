@@ -35,6 +35,8 @@ import AI_avatar from "../../assets/iconSideChatDoc.png";
 import WordCloudComponent from "./component/WordCloud.tsx";
 import ClickComponent from "./component/ClickComponent.tsx"; // 引入新的子组件
 import { useUserStore } from "../../stores/userStore.tsx";
+import mainLogo from "../../assets/main-logo.png";
+import ImageViewer from "./component/ImageViewer.tsx";
 
 // TODO， 没有相应接口，mock数据
 async function getAiResponse(userMessage: string): Promise<string> {
@@ -47,7 +49,7 @@ async function getAiResponse(userMessage: string): Promise<string> {
 
 const DetailPage: React.FC = () => {
   const { id, type } = useParams<{ id?: string; type?: string }>(); // 根据url来获取params
-
+  const src = mainLogo;
   // 显式进行类型转换
   const stringId: string = id ?? ""; // 如果 id 为 undefined，使用默认值 ""
   const numericType: number = type ? parseInt(type, 10) : -1; // 如果 type 为 undefined，使用默认值 -1
@@ -297,19 +299,15 @@ const DetailPage: React.FC = () => {
               </div>
             }
           </Card>
-          <Card style={{ marginTop: "20px" }}>
-            {
-              <div className="feedback-box">
-                <Typography.Title level={5}>
-                  您对这篇文档的评价
-                </Typography.Title>
-                <ThumbButtons
-                  id={stringId ?? -1} // 如果 id 是 undefined，则使用空字符串(TODO)
-                  initialLikes={feedbackCnt.likes}
-                  initialDislikes={feedbackCnt.dislikes}
-                />
-              </div>
-            }
+          <Card
+            style={{
+              marginTop: "20px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <ImageViewer imageUrl={src} />
           </Card>
         </div>
       </div>
@@ -372,7 +370,7 @@ const DetailPage: React.FC = () => {
               />
 
               <Divider />
-              {<RelatedLinks />}
+              {<RelatedLinks id={stringId} type={numericType} />}
 
               {/* 悬浮按钮 */}
               <FloatButton.Group

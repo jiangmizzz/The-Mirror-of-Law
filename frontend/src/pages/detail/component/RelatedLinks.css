@@ -21,3 +21,9 @@
   flex-direction: column;
   align-items: baseline;
 }
+
+.empty-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
