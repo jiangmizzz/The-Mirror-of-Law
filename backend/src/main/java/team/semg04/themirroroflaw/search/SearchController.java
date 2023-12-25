@@ -23,7 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import team.semg04.themirroroflaw.Response;
-import team.semg04.themirroroflaw.search.entity.Laws;
+import team.semg04.themirroroflaw.search.entity.MirrorOfLaw;
 import team.semg04.themirroroflaw.user.entity.User;
 import team.semg04.themirroroflaw.user.service.UserService;
 import team.semg04.themirroroflaw.user.utils.RememberMeService;
@@ -69,7 +69,7 @@ public class SearchController {
                 .withSource("""
                         {
                           "_source": {
-                            "includes": ["id","title","publish","office","like","dislike"]
+                            "includes": ["id","type","title","date","source","like","dislike"]
                           },
                           "highlight": {
                             "boundary_chars": "{{{boundary_chars}}}",
@@ -82,7 +82,7 @@ public class SearchController {
                           },
                           "post_filter": {
                             "range": {
-                              "publish": {
+                              "date": {
                                 "gte": "{{{startTime}}}",
                                 "lte": "{{{endTime}}}"
                               }
@@ -90,13 +90,20 @@ public class SearchController {
                           },
                           "query": {
                             "bool": {
-                              "must": {
-                                  "multi_match": {
-                                    "query": "{{{input}}}",
-                                    "fields": ["content", "title^3"],
-                                    "analyzer": "ik_smart"
-                                  }
-                              },
+                              "must": [
+                                        {
+                                          "multi_match": {
+                                            "query": "{{{input}}}",
+                                            "fields": ["content", "title^3"],
+                                            "analyzer": "ik_smart"
+                                          }
+                                        },
+                                        {
+                                          "terms": {
+                                            "type": {{{type}}}
+                                          }
+                                        }
+                                      ],
                               "should": {
                                   "multi_match": {
                                   "query": "中华人民共和国",
@@ -114,7 +121,7 @@ public class SearchController {
                 .withSource("""
                         {
                           "_source": {
-                            "includes": ["id","title","publish","office","like","dislike"]
+                            "includes": ["id","type","title","date","source","like","dislike"]
                           },
                           "highlight": {
                             "boundary_chars": "{{{boundary_chars}}}",
@@ -124,10 +131,21 @@ public class SearchController {
                             "fields": {
                               "content": {
                                 "highlight_query": {
-                                  "multi_match": {
-                                    "query": "{{{input}}}",
-                                    "fields": ["content"],
-                                    "analyzer": "ik_smart"
+                                  "bool": {
+                                    "must": [
+                                        {
+                                          "multi_match": {
+                                            "query": "{{{input}}}",
+                                            "fields": ["content"],
+                                            "analyzer": "ik_smart"
+                                          }
+                                        },
+                                        {
+                                          "terms": {
+                                            "type": {{{type}}}
+                                          }
+                                        }
+                                      ]
                                   }
                                 }
                               }
@@ -135,7 +153,7 @@ public class SearchController {
                           },
                           "post_filter": {
                             "range": {
-                              "publish": {
+                              "date": {
                                 "gte": "{{{startTime}}}",
                                 "lte": "{{{endTime}}}"
                               }
@@ -143,13 +161,20 @@ public class SearchController {
                           },
                           "query": {
                             "bool": {
-                              "must": {
-                                  "multi_match": {
-                                    "query": "{{{input}}}",
-                                    "fields": ["{{{field}}}"],
-                                    "analyzer": "ik_smart"
-                                  }
-                              },
+                              "must": [
+                                        {
+                                          "multi_match": {
+                                            "query": "{{{input}}}",
+                                            "fields": ["{{{field}}}"],
+                                            "analyzer": "ik_smart"
+                                          }
+                                        },
+                                        {
+                                          "terms": {
+                                            "type": {{{type}}}
+                                          }
+                                        }
+                                      ],
                               "should": {
                                   "multi_match": {
                                   "query": "中华人民共和国",
@@ -165,11 +190,6 @@ public class SearchController {
                         }""").build();
         try {
             elasticsearchOperations.deleteScript("search_by_all");
-            log.debug("Delete script success.");
-        } catch (Exception e) {
-            log.error("Delete script error: " + e.getMessage());
-        }
-        try {
             elasticsearchOperations.deleteScript("search_by_single");
             log.debug("Delete script success.");
         } catch (Exception e) {
@@ -239,74 +259,56 @@ public class SearchController {
 
             Pageable pageable = Pageable.ofSize(pageSize).withPage(pageNumber);
             String boundary_chars = ".,!?; \\t\\n，。！？；、";
-            for (Integer typeInt : resultTypeInt) {
-                if (typeInt == ResultType.LAW.ordinal()) {
-                    String fields = switch (searchType) {
-                        case TITLE -> "title";
-                        case SOURCE -> "office";
-                        default -> "content";
-                    };
-                    SearchHits<Laws> lawsData;
-                    if (searchType == SearchType.ALL) {
-                        lawsData = elasticsearchOperations.search(SearchTemplateQuery.builder()
-                                .withId("search_by_all").withParams(Map.of("input", input, "startTime",
-                                        startTime.toString(), "endTime", endTime.toString(), "size",
-                                        pageable.getPageSize(), "from", pageable.getOffset(), "boundary_chars",
-                                        boundary_chars)).build(), Laws.class);
-                    } else {
-                        lawsData = elasticsearchOperations.search(SearchTemplateQuery.builder()
-                                .withId("search_by_single").withParams(Map.of("input", input, "field",
-                                        fields, "startTime", startTime.toString(),
-                                        "endTime", endTime.toString(), "size", pageable.getPageSize(), "from",
-                                        pageable.getOffset(), "boundary_chars", boundary_chars)).build(), Laws.class);
-                    }
-                    searchList.setTotal(searchList.getTotal() + (int) lawsData.getTotalHits());
-                    for (SearchHit<Laws> data : lawsData) {
-                        SearchList.ResultItem resultItem = new SearchList.ResultItem();
-                        resultItem.setId(data.getContent().getId());
-                        resultItem.setTitle(data.getContent().getTitle());
-                        resultItem.setDescription(String.join("...", data.getHighlightField("content")).replaceAll(
-                                "\n", ""));
-                        if (resultItem.getDescription().isEmpty()) {    // Highlight is empty 正文中可能没有关键词
-                            Laws laws = elasticsearchOperations.get(data.getContent().getId(), Laws.class);
-                            if (laws != null) {
-                                String content = laws.getContent();
-                                if (content != null) {
-                                    resultItem.setDescription(content.substring(0, Math.min(content.length(), 200)));
-                                }
-                            }
-                            if (resultItem.getDescription().isEmpty()) {    // Content is still empty(get content
-                                // failed)
-                                resultItem.setDescription("无内容");
-                            }
-                        }
-                        resultItem.setDate(data.getContent().getPublish());
-                        resultItem.setSource(data.getContent().getOffice());
-                        resultItem.setResultType(ResultType.LAW.ordinal());
-                        resultItem.setFeedbackCnt(new FeedbackCnt());
-                        resultItem.getFeedbackCnt().setLikes(data.getContent().getLike());
-                        resultItem.getFeedbackCnt().setDislikes(data.getContent().getDislike());
-                        resultItem.setScore(data.getScore());
-                        searchList.getResults().add(resultItem);
-                    }
-                } else if (typeInt == ResultType.JUDGEMENT.ordinal()) {
-                    log.warn("Get search result list error: Not implemented. Type: " + typeInt);
-                    return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(), "Not " +
-                            "implemented."), HttpStatus.BAD_REQUEST);
-                }
-            }
 
-            // Sort result list and get the first pageSize items
-            // if score is the same, sort by date
-            searchList.getResults().sort((o1, o2) -> {
-                if (o1.getScore().equals(o2.getScore())) {
-                    return o2.getDate().compareTo(o1.getDate());
-                } else {
-                    return o2.getScore().compareTo(o1.getScore());
+            String resultType = resultTypeInt.toString();
+
+            String fields = switch (searchType) {
+                case TITLE -> "title";
+                case SOURCE -> "source";
+                default -> "content";
+            };
+            SearchHits<MirrorOfLaw> searchResult;
+            if (searchType == SearchType.ALL) {
+                searchResult = elasticsearchOperations.search(SearchTemplateQuery.builder()
+                        .withId("search_by_all").withParams(Map.of("input", input, "startTime",
+                                startTime.toString(), "endTime", endTime.toString(), "size",
+                                pageable.getPageSize(), "from", pageable.getOffset(), "boundary_chars",
+                                boundary_chars, "type", resultType)).build(), MirrorOfLaw.class);
+            } else {
+                searchResult = elasticsearchOperations.search(SearchTemplateQuery.builder()
+                        .withId("search_by_single").withParams(Map.of("input", input, "field",
+                                fields, "startTime", startTime.toString(),
+                                "endTime", endTime.toString(), "size", pageable.getPageSize(), "from",
+                                pageable.getOffset(), "boundary_chars", boundary_chars, "type",
+                                resultType)).build(), MirrorOfLaw.class);
+            }
+            searchList.setTotal((int) searchResult.getTotalHits());
+            for (SearchHit<MirrorOfLaw> data : searchResult) {
+                SearchList.ResultItem resultItem = new SearchList.ResultItem();
+                resultItem.setId(data.getContent().getId());
+                resultItem.setTitle(data.getContent().getTitle());
+                resultItem.setDescription(String.join("...", data.getHighlightField("content")).replaceAll("\n", ""));
+                if (resultItem.getDescription().isEmpty()) {    // Highlight is empty 正文中可能没有关键词
+                    MirrorOfLaw document = elasticsearchOperations.get(data.getContent().getId(), MirrorOfLaw.class);
+                    if (document != null) {
+                        String content = document.getContent();
+                        if (content != null) {
+                            resultItem.setDescription(content.substring(0, Math.min(content.length(), 200)));
+                        }
+                    }
+                    if (resultItem.getDescription().isEmpty()) {    // Content is still empty(get content failed)
+                        resultItem.setDescription("无内容");
+                    }
                 }
-            });
-            searchList.setResults(searchList.getResults().subList(0, Math.min(searchList.getResults().size(),
-                    pageSize)));
+                resultItem.setDate(data.getContent().getDate());
+                resultItem.setSource(data.getContent().getSource());
+                resultItem.setResultType(data.getContent().getType());
+                resultItem.setFeedbackCnt(new FeedbackCnt());
+                resultItem.getFeedbackCnt().setLikes(data.getContent().getLike());
+                resultItem.getFeedbackCnt().setDislikes(data.getContent().getDislike());
+                resultItem.setScore(data.getScore());
+                searchList.getResults().add(resultItem);
+            }
 
             // add input into user history
             User user = null;
@@ -351,31 +353,23 @@ public class SearchController {
                                                          @RequestParam(name = "type") Integer type) {
         try {
             Detail detail = new Detail();
-            if (type == ResultType.LAW.ordinal()) {
-                Laws laws = elasticsearchOperations.get(id, Laws.class);
-                if (laws == null) {
-                    log.warn("Get search result detail error: LawsData not found. Id: " + id);
-                    return new ResponseEntity<>(new Response<>(false, null, HttpStatus.NOT_FOUND.value(),
-                            "LawsData not found."), HttpStatus.NOT_FOUND);
-                }
-                detail.setTitle(laws.getTitle());
-                detail.setSource(laws.getOffice());
-                detail.setPublishTime(laws.getPublish());
-                detail.setFeedbackCnt(new FeedbackCnt());
-                detail.getFeedbackCnt().setLikes(laws.getLike());
-                detail.getFeedbackCnt().setDislikes(laws.getDislike());
-                detail.setContent(laws.getContent());
-                detail.setResultType(ResultType.LAW.ordinal());
-                detail.setLink(laws.getUrl());
-                log.debug("Get search result detail success. Id: " + id);
-                return new ResponseEntity<>(new Response<>(true, detail, 0, ""), HttpStatus.OK);
-            } else if (type == ResultType.JUDGEMENT.ordinal()) {
-                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(), "Not " +
-                        "implemented."), HttpStatus.BAD_REQUEST);
-            } else {
-                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(), "Invalid " +
-                        "type."), HttpStatus.BAD_REQUEST);
+            MirrorOfLaw document = elasticsearchOperations.get(id, MirrorOfLaw.class);
+            if (document == null) {
+                log.warn("Get search result detail error: Document not found. Id: " + id);
+                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.NOT_FOUND.value(),
+                        "Document not found."), HttpStatus.NOT_FOUND);
             }
+            detail.setTitle(document.getTitle());
+            detail.setSource(document.getSource());
+            detail.setPublishTime(document.getDate());
+            detail.setFeedbackCnt(new FeedbackCnt());
+            detail.getFeedbackCnt().setLikes(document.getLike());
+            detail.getFeedbackCnt().setDislikes(document.getDislike());
+            detail.setContent(document.getContent());
+            detail.setResultType(document.getType());
+            detail.setLink(document.getUrl());
+            log.debug("Get search result detail success. Id: " + id);
+            return new ResponseEntity<>(new Response<>(true, detail, 0, ""), HttpStatus.OK);
         } catch (Exception e) {
             log.error("Get search result detail error: " + e.getMessage());
             return new ResponseEntity<>(new Response<>(false, null, HttpStatus.INTERNAL_SERVER_ERROR.value(),
@@ -450,37 +444,30 @@ public class SearchController {
             userService.updateById(user);
 
             // update in Elasticsearch
-            if (feedback.getType() == ResultType.LAW.ordinal()) {
-                Laws laws = elasticsearchOperations.get(feedback.getId(), Laws.class);
-                if (laws == null) {
-                    log.warn("Feedback error: LawsData not found. Id: " + feedback.getId());
-                    return new ResponseEntity<>(new Response<>(false, null, HttpStatus.NOT_FOUND.value(),
-                            "LawsData not found."), HttpStatus.NOT_FOUND);
-                }
-                switch (feedbackType) {
-                    case LIKE -> laws.setLike(laws.getLike() + 1);
-                    case DISLIKE -> laws.setDislike(laws.getDislike() + 1);
-                    case CANCEL_LIKE -> laws.setLike(laws.getLike() - 1);
-                    case CANCEL_DISLIKE -> laws.setDislike(laws.getDislike() - 1);
-                    case LIKE_TO_DISLIKE -> {
-                        laws.setLike(laws.getLike() - 1);
-                        laws.setDislike(laws.getDislike() + 1);
-                    }
-                    case DISLIKE_TO_LIKE -> {
-                        laws.setLike(laws.getLike() + 1);
-                        laws.setDislike(laws.getDislike() - 1);
-                    }
-                }
-                elasticsearchOperations.save(laws);
-                log.debug("Feedback success. Id: " + feedback.getId());
-                return new ResponseEntity<>(new Response<>(true, feedbackType.ordinal(), 0, ""), HttpStatus.OK);
-            } else if (feedback.getType() == ResultType.JUDGEMENT.ordinal()) {
-                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(), "Not " +
-                        "implemented."), HttpStatus.BAD_REQUEST);
-            } else {
-                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(), "Invalid " +
-                        "type."), HttpStatus.BAD_REQUEST);
+            MirrorOfLaw document = elasticsearchOperations.get(feedback.getId(), MirrorOfLaw.class);
+            if (document == null) {
+                log.warn("Feedback error: LawsData not found. Id: " + feedback.getId());
+                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.NOT_FOUND.value(),
+                        "LawsData not found."), HttpStatus.NOT_FOUND);
             }
+            switch (feedbackType) {
+                case LIKE -> document.setLike(document.getLike() + 1);
+                case DISLIKE -> document.setDislike(document.getDislike() + 1);
+                case CANCEL_LIKE -> document.setLike(document.getLike() - 1);
+                case CANCEL_DISLIKE -> document.setDislike(document.getDislike() - 1);
+                case LIKE_TO_DISLIKE -> {
+                    document.setLike(document.getLike() - 1);
+                    document.setDislike(document.getDislike() + 1);
+                }
+                case DISLIKE_TO_LIKE -> {
+                    document.setLike(document.getLike() + 1);
+                    document.setDislike(document.getDislike() - 1);
+                }
+            }
+            elasticsearchOperations.save(document);
+            log.debug("Feedback success. Id: " + feedback.getId());
+            return new ResponseEntity<>(new Response<>(true, feedbackType.ordinal(), 0, ""), HttpStatus.OK);
+
         } catch (Exception e) {
             log.error("Feedback error: " + e.getMessage());
             return new ResponseEntity<>(new Response<>(false, null, HttpStatus.INTERNAL_SERVER_ERROR.value(),

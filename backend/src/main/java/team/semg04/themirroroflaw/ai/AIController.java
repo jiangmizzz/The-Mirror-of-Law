@@ -19,9 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import team.semg04.themirroroflaw.Response;
 import team.semg04.themirroroflaw.search.SearchController;
-import team.semg04.themirroroflaw.search.entity.Laws;
-
-import java.util.List;
+import team.semg04.themirroroflaw.search.entity.MirrorOfLaw;
 
 @Slf4j
 @RestController
@@ -36,6 +34,7 @@ public class AIController {
             "你的回答应当只包含总结的内容，而不该出现‘好的’、‘收到’等无意义的回应：\n";
 
     private ElasticsearchOperations elasticsearchOperations;
+
     @Autowired
     public void setElasticsearchOperations(ElasticsearchOperations elasticsearchOperations) {
         this.elasticsearchOperations = elasticsearchOperations;
@@ -80,14 +79,15 @@ public class AIController {
             @Schema(implementation = Response.class)))
     })
     @GetMapping("/summarize")
-    public ResponseEntity<Response<String>> summarizeInfo(@RequestParam(name = "id") String id, @RequestParam(name = "type") Integer typeInt) {
+    public ResponseEntity<Response<String>> summarizeInfo(@RequestParam(name = "id") String id, @RequestParam(name =
+            "type") Integer typeInt) {
         String result = null;
         boolean tooLong = false;
         String tooLongMessage = "文档内容过长，已自动截取部分内容进行总结：\n";
         String sensitiveMessage = "文档可能包含敏感信息，无法进行总结！";
         try {
-            if(typeInt == DocumentType.LAW.ordinal()) {
-                Laws laws = elasticsearchOperations.get(id, Laws.class);
+            if (typeInt == DocumentType.LAW.ordinal()) {
+                MirrorOfLaw laws = elasticsearchOperations.get(id, MirrorOfLaw.class);
                 if (laws == null) {
                     log.error("Get search result detail error: LawsData not found. Id: " + id);
                     return new ResponseEntity<>(new Response<>(false, null, HttpStatus.NOT_FOUND.value(),
@@ -98,16 +98,18 @@ public class AIController {
                     tooLong = true;
                 }
                 result = SparkModelConnector.getAnswer(summarizePrompt + laws.getContent());
-                if (result.isEmpty())
+                if (result.isEmpty()) {
                     return new ResponseEntity<>(new Response<>(true, sensitiveMessage, 0, ""), HttpStatus.OK);
+                }
             } else if (typeInt == SearchController.ResultType.JUDGEMENT.ordinal()) {
                 return new ResponseEntity<>(new Response<>(false, null, HttpStatus.BAD_REQUEST.value(), "Not " +
                         "implemented."), HttpStatus.BAD_REQUEST);
             }
-            if(!tooLong)
+            if (!tooLong) {
                 return new ResponseEntity<>(new Response<>(true, result, 0, ""), HttpStatus.OK);
-            else
+            } else {
                 return new ResponseEntity<>(new Response<>(true, tooLongMessage + result, 0, ""), HttpStatus.OK);
+            }
 
         } catch (Exception e) {
             return new ResponseEntity<>(new Response<>(false, null, HttpStatus.INTERNAL_SERVER_ERROR.value(),

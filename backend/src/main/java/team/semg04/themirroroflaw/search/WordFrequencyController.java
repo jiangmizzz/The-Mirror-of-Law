@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import team.semg04.themirroroflaw.Response;
-import team.semg04.themirroroflaw.search.entity.Laws;
+import team.semg04.themirroroflaw.search.entity.MirrorOfLaw;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -54,7 +54,7 @@ public class WordFrequencyController {
         List<Map<String, Object>> wordFrequencyList = new ArrayList<>();
         try {
             if(typeInt == DocumentType.LAW.ordinal()) {
-                Laws laws = elasticsearchOperations.get(id, Laws.class);
+                MirrorOfLaw laws = elasticsearchOperations.get(id, MirrorOfLaw.class);
                 if (laws == null) {
                     log.error("Get search result detail error: LawsData not found. Id: " + id);
                     return new ResponseEntity<>(new Response<>(false, null, HttpStatus.NOT_FOUND.value(),
