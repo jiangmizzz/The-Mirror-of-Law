@@ -8,10 +8,9 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
 
 import java.time.LocalDate;
 
-
 @Data
-@Document(indexName = "laws")
-public class Laws {
+@Document(indexName = "mirror-of-law")
+public class MirrorOfLaw {
     @Id
     private String id;
 
@@ -19,18 +18,14 @@ public class Laws {
     private String title;
     @Field(name = "level", type = FieldType.Text)
     private String level;
-    @Field(name = "office", type = FieldType.Keyword)
-    private String office;
-    @Field(name = "publish", type = FieldType.Date)
-    private LocalDate publish;
-    @Field(name = "expiry", type = FieldType.Date)
-    private LocalDate expiry;
-    @Field(name = "type", type = FieldType.Binary)
-    private String type;
-    @Field(name = "status", type = FieldType.Byte)
-    private Byte status;
+    @Field(name = "source", type = FieldType.Text)
+    private String source;
+    @Field(name = "date", type = FieldType.Date)
+    private LocalDate date;
     @Field(name = "content", type = FieldType.Text)
     private String content;
+    @Field(name = "type", type = FieldType.Integer)
+    private Integer type;
     @Field(name = "url", type = FieldType.Binary)
     private String url;
     @Field(name = "like", type = FieldType.Integer)
