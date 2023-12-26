@@ -34,9 +34,10 @@ const { TextArea } = Input;
 import AI_avatar from "../../assets/iconSideChatDoc.png";
 import WordCloudComponent from "./component/WordCloud.tsx";
 import ClickComponent from "./component/ClickComponent.tsx"; // 引入新的子组件
-import { useUserStore } from "../../stores/userStore.tsx";
+// import { useUserStore } from "../../stores/userStore.tsx";
 import mainLogo from "../../assets/main-logo.png";
 import ImageViewer from "./component/ImageViewer.tsx";
+import ScrollToBottomButton from "./component/ScrollToBottomButton.tsx";
 
 // TODO， 没有相应接口，mock数据
 async function getAiResponse(userMessage: string): Promise<string> {
@@ -51,15 +52,15 @@ const DetailPage: React.FC = () => {
   const { id, type } = useParams<{ id?: string; type?: string }>(); // 根据url来获取params
   const src = mainLogo;
   // 显式进行类型转换
-  const stringId: string = id ?? ""; // 如果 id 为 undefined，使用默认值 ""
-  const numericType: number = type ? parseInt(type, 10) : -1; // 如果 type 为 undefined，使用默认值 -1
+  let stringId: string = id ?? ""; // 如果 id 为 undefined，使用默认值 ""
+  let numericType: number = type ? parseInt(type, 10) : -1; // 如果 type 为 undefined，使用默认值 -1
   //   const [data, setData] = useState<any>({}); // 初始化为空对象
   const [inputValue, setInputValue] = useState(""); // AI chatbot textarea中的文本（用户输入的信息）
   const [messageApi, contextHolder] = message.useMessage(); // 全局提示
   const [ifOpen, setOpen] = useState<boolean>(false); // 是否启用AI辅助功能（打开抽屉）
   const [isOpenFloatTooltip, setIsOpenFloatTooltip] = useState(true);
   const [isClickOn, setIsClickOn] = useState(true); // 是否开启快乐特效（鼠标点击动效）
-  const userStore = useUserStore(); //全局用户状态管理器
+  //   const userStore = useUserStore(); //全局用户状态管理器
 
   const [detailData, setDetailData] = useState<DetailData | null>(null); // 在 DetailPage 组件中定义一个状态变量用于存储详情数据
   const navigate = useNavigate();
@@ -197,6 +198,8 @@ const DetailPage: React.FC = () => {
     content: string;
     resultType: number;
     link: string;
+    cause: string; // 案号
+    caseId: string; // 案由
   }
 
   const [isGetDetail, setIsGetDetail] = useState(false);
@@ -208,12 +211,27 @@ const DetailPage: React.FC = () => {
     return "/search/detail?id=" + stringId + "&type=" + numericType;
   }, getFetcher);
 
+  // 定义处理更新路径的回调函数（传递给子组件RelatedLinks）
+  const handleRelatedLinkClick = (itemId: string, itemType: number) => {
+    // 在这里处理更新路径的事件，可以通过React Router的API来更新路径
+    // 并且可以在这里更新父组件中的状态或属性
+    stringId = itemId;
+    numericType = itemType;
+    setIsGetDetail(false);
+    console.log(
+      "Clicked related link with id:",
+      itemId,
+      " and type:",
+      itemType
+    );
+  };
+
   // 显示正在加载的message
   const showLoading = () => {
     messageApi.open({
       type: "loading",
-      content: "数据加载中...",
-      duration: 0,
+      content: "文档数据加载中...",
+      duration: 1500,
     });
     // Dismiss manually and asynchronously
     setTimeout(messageApi.destroy, 2500);
@@ -234,6 +252,7 @@ const DetailPage: React.FC = () => {
       setDetailData(data); // 更新详情数据
     }
   }, [data]);
+  console.log("DetailData:", data);
 
   // 在加载状态下显示 loading 界面
   if (isLoading) {
@@ -328,6 +347,19 @@ const DetailPage: React.FC = () => {
                 {title}
               </Typography.Title>
 
+              {detailData && (detailData.cause || detailData.caseId) && (
+                <div>
+                  <div
+                    style={{ display: "flex", justifyContent: "space-between" }}
+                  >
+                    {detailData.cause && <div>案 由： {detailData.cause}</div>}
+                    {detailData.caseId && (
+                      <div>案 号： {detailData.caseId}</div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div
                 style={{
                   display: "flex",
@@ -341,7 +373,7 @@ const DetailPage: React.FC = () => {
                   </Typography.Text>
                   <Typography.Text
                     type="secondary"
-                    style={{ marginLeft: "8px", fontSize: 15 }}
+                    style={{ marginLeft: "16px", fontSize: 15 }}
                   >
                     来源：{source}
                   </Typography.Text>
@@ -367,44 +399,53 @@ const DetailPage: React.FC = () => {
                 id={stringId || ""} // 如果 id 是 undefined，则使用空字符串(TODO)
                 initialLikes={feedbackCnt.likes}
                 initialDislikes={feedbackCnt.dislikes}
+                resultType={numericType}
               />
 
               <Divider />
-              {<RelatedLinks id={stringId} type={numericType} />}
+              {
+                <RelatedLinks
+                  id={stringId}
+                  type={numericType}
+                  onRelatedLinkClick={handleRelatedLinkClick}
+                />
+              }
 
               {/* 悬浮按钮 */}
-              <FloatButton.Group
-                trigger="click"
-                type="primary"
-                style={{ right: 24 }}
-                icon={<CustomerServiceOutlined />}
-                badge={{ dot: true }}
-              >
-                <Tooltip
-                  title="开启/关闭快乐特效"
-                  placement="right"
-                  color="#7464FA"
+              <Tooltip title="点击展开" placement="left" color="#7464FA">
+                <FloatButton.Group
+                  trigger="click"
+                  type="primary"
+                  style={{ right: 24 }}
+                  icon={<CustomerServiceOutlined />}
+                  badge={{ dot: true }}
                 >
-                  <FloatButton
-                    badge={{ dot: true }}
-                    icon={<SmileOutlined />}
-                    onClick={changeCSS}
-                  />
-                </Tooltip>
-                <Tooltip title="回到上一页" placement="right" color="#7464FA">
-                  <FloatButton
-                    icon={<ArrowLeftOutlined />}
-                    onClick={goBackToLastPage}
-                  />
-                </Tooltip>
-                <Tooltip title="AI总结" placement="right" color="#7464FA">
-                  <FloatButton
-                    badge={{ dot: true }}
-                    icon={<AI_ICON />}
-                    onClick={showDrawer}
-                  />
-                </Tooltip>
-              </FloatButton.Group>
+                  <Tooltip
+                    title="开启/关闭快乐特效"
+                    placement="right"
+                    color="#7464FA"
+                  >
+                    <FloatButton
+                      badge={{ dot: true }}
+                      icon={<SmileOutlined />}
+                      onClick={changeCSS}
+                    />
+                  </Tooltip>
+                  <Tooltip title="回到上一页" placement="right" color="#7464FA">
+                    <FloatButton
+                      icon={<ArrowLeftOutlined />}
+                      onClick={goBackToLastPage}
+                    />
+                  </Tooltip>
+                  <Tooltip title="AI总结" placement="right" color="#7464FA">
+                    <FloatButton
+                      badge={{ dot: true }}
+                      icon={<AI_ICON />}
+                      onClick={showDrawer}
+                    />
+                  </Tooltip>
+                </FloatButton.Group>
+              </Tooltip>
               <Tooltip
                 title="回到顶部"
                 placement="right"
@@ -422,6 +463,7 @@ const DetailPage: React.FC = () => {
                   style={{ right: 100, backgroundColor: "#7464FA" }}
                 />
               </Tooltip>
+              {<ScrollToBottomButton />}
               <Drawer
                 title="AI智能文档总结"
                 placement="right"

@@ -20,12 +20,14 @@ interface ThumbButtonsProps {
   id: string; // 从父组件传递的文档id
   initialLikes: number;
   initialDislikes: number;
+  resultType: number;
 }
 
 const ThumbButtons: React.FC<ThumbButtonsProps> = ({
   id,
   initialLikes,
   initialDislikes,
+  resultType,
 }) => {
   const [likes, setLikes] = useState(initialLikes);
   const [dislikes, setDislikes] = useState(initialDislikes);
@@ -137,6 +139,26 @@ const ThumbButtons: React.FC<ThumbButtonsProps> = ({
         >
           {dislikes}
         </Button>
+        {/* <Button
+		className="thumb-button"
+          type={userStore.likes.indexOf(id) == -1 ? "dashed" : "primary"}
+          icon={<LikeOutlined />}
+          onClick={() => props.handlefeedback(id, resultType, true)}
+        >
+          {props.feedbackCnt.likes}
+        </Button>
+        <Button
+		className="thumb-button"
+          type={
+            userStore.dislikes.indexOf(id) == -1 ? "dashed" : "primary"
+          }
+          icon={<DislikeOutlined />}
+          onClick={() =>
+            props.handlefeedback(id, resultType, false)
+          }
+        >
+          {props.feedbackCnt.dislikes}
+        </Button> */}
 
         {<FavoriteButton />}
 

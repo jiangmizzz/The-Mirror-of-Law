@@ -13,70 +13,87 @@ import {
 } from "antd";
 import { StarTwoTone, InfoCircleOutlined } from "@ant-design/icons";
 import "./RelatedLinks.css";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { getFetcher } from "../../../utils";
 import useSWR from "swr";
 
 interface RelatedProps {
   id: string; // 从父组件传递的文档id
   type: number; //文档类型，可以再进行规定
+  onRelatedLinkClick: (itemId: string, itemType: number) => void; // 定义回调函数的类型
 }
 
 interface RelatedData {
   title: string;
   id: string;
+  type: number;
 }
 
 interface RelatedDataList {
-  map(
-    arg0: (
-      item: RelatedData,
-      index: number
-    ) => import("react/jsx-runtime").JSX.Element
-  ): React.ReactNode;
-  data: RelatedData[];
+  links: {
+    id: string;
+    title: string;
+    type: number;
+  }[];
+  total: number;
 }
 
-const RelatedLinks: React.FC<RelatedProps> = ({ id, type }) => {
+const RelatedLinks: React.FC<RelatedProps> = ({
+  id,
+  type,
+  onRelatedLinkClick,
+}) => {
   const [messageApi, contextHolder] = message.useMessage(); // 全局提示
   const [isGetResponse, setIsGetResponse] = useState(false); // 是否已经获取词云图的数据，防止多次请求
   const navigate = useNavigate(); //导航到其他页面
-  const [relatedList, setRelatedList] = useState<RelatedDataList | null>(null);
+  const location = useLocation(); //模拟页面栈
+  const [relatedList, setRelatedList] = useState<RelatedData[]>([]); // 将初始状态设置为空数组
 
-  const { data, error, isLoading } = useSWR<RelatedDataList>(() => {
+  const {
+    data: relatedData,
+    error: relatedError,
+    isLoading: relatedLoading,
+  } = useSWR<RelatedDataList>(() => {
     if (isGetResponse) {
       // 设置条件过滤多余请求
       return false;
     }
     return "/search/related?id=" + id + "&type=" + type;
   }, getFetcher);
-  console.log("RelatedDataList Data:", data);
+  console.log("RelatedDataList Data:", relatedData);
 
   useEffect(() => {
-    // 当数据变化时，更新 relatedList
-    if (data) {
-      setRelatedList(data);
+    if (relatedData) {
+      setRelatedList(relatedData.links);
       setIsGetResponse(true);
     }
-  }, [data]);
+  }, [relatedData]);
 
   // 当获取获取相关内容数据失败时，显示错误信息
   useEffect(() => {
-    if (error) {
-      console.error("Failed to fetch word-cloud data:", error);
+    if (relatedError) {
+      console.error("Failed to fetch word-cloud data:", relatedError);
       message.error("获取相关推荐列表失败！");
     }
-  }, [error]);
+  }, [relatedError]);
 
   // 显示正在加载的message
   const showLoading = () => {
     messageApi.open({
       type: "loading",
-      content: "数据加载中...",
-      duration: 0,
+      content: "相关文档列表加载中...",
+      duration: 1500,
     });
     // Dismiss manually and asynchronously
     setTimeout(messageApi.destroy, 2500);
+  };
+
+  const handleRelatedLinkClick = (itemId: string, itemType: number) => {
+    navigate(`/detail/${itemId}/${itemType}`, {
+      state: { previousLocation: location.pathname },
+    });
+    // 调用父组件传递的回调函数，并传递相关信息（让父组件刷新页面）
+    onRelatedLinkClick(itemId, itemType);
   };
 
   //   useEffect(() => {
@@ -100,7 +117,7 @@ const RelatedLinks: React.FC<RelatedProps> = ({ id, type }) => {
   //   }, []);
 
   // 在加载状态下显示 loading 界面
-  if (isLoading) {
+  if (relatedLoading) {
     // 调用showLoading()函数来显示加载状态
     showLoading();
     return (
@@ -135,7 +152,7 @@ const RelatedLinks: React.FC<RelatedProps> = ({ id, type }) => {
     );
   }
 
-  if (!relatedList) {
+  if (!relatedList || relatedList.length === 0) {
     return (
       <div className="empty-box">
         <Card
@@ -184,21 +201,21 @@ const RelatedLinks: React.FC<RelatedProps> = ({ id, type }) => {
       </div>
       <Divider></Divider>
       <div className="related-links-list">
-        {relatedList.map((item, index) => {
-          return (
+        {Array.isArray(relatedList) &&
+          relatedList.map((item, index) => (
             <Button
               key={item.id}
               type="link"
-              onClick={() => {
-                navigate(`/detail/${item.id}/type`, {
-                  state: { previousLocation: location.pathname },
-                });
-              }}
+              onClick={() =>
+                handleRelatedLinkClick(
+                  item.id,
+                  item.type != null ? item.type : 0
+                )
+              }
             >
               {index + 1 + ". " + item.title}
             </Button>
-          );
-        })}
+          ))}
       </div>
     </Card>
   );

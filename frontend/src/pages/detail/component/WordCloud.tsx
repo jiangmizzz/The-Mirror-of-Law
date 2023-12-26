@@ -245,7 +245,7 @@ const WordCloudComponent: React.FC<CloudProps> = ({ id, type }) => {
   const showLoading = () => {
     messageApi.open({
       type: "loading",
-      content: "数据加载中...",
+      content: "词云图加载中...",
       duration: 0,
     });
     // Dismiss manually and asynchronously
@@ -345,7 +345,7 @@ const WordCloudComponent: React.FC<CloudProps> = ({ id, type }) => {
       shadowBlur: 10,
     },
     gridSize: 14,
-    imageMask: maskImg,
+    imageMask: maskImg, // TODO 图片遮罩功能貌似没有生效？
     random: () => 0.5,
     forceFit: true,
   };
