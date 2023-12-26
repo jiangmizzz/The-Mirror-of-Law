@@ -73,6 +73,7 @@ public class SpringSecurityConfig {
                         .requestMatchers("/api/user/register").permitAll()
                         .requestMatchers("/api/search/list").permitAll()
                         .requestMatchers("/api/search/detail").permitAll()
+                        .requestMatchers("/api/search/related").permitAll()
                         .requestMatchers("/api/ai/**").permitAll()
                         .requestMatchers("/api/word-cloud/**").permitAll()
                         .requestMatchers("/api/graph/**").permitAll()

@@ -127,6 +127,13 @@ public class SearchController {
                       }
                     }
                   },
+                  "track_scores": true,
+                  "sort": [
+                     {"_score": "desc"},
+                     {"date": "desc"},
+                     {"like": "desc"},
+                     {"dislike": "asc"}
+                  ],
                   "size": {{{size}}},
                   "from": {{{from}}}
                 }""").build();
@@ -197,6 +204,12 @@ public class SearchController {
                       }
                     }
                   },
+                  "sort": [
+                     {"_score": "desc"},
+                     {"date": "desc"},
+                     {"like": "desc"},
+                     {"dislike": "asc"}
+                  ],
                   "size": {{{size}}},
                   "from": {{{from}}}
                 }""").build();
@@ -252,7 +265,16 @@ public class SearchController {
     public ResponseEntity<Response<SearchList>> searchLaws(@RequestParam(name = "input") String input,
                                                            @RequestParam(name = "searchType", required = false,
                                                                    defaultValue = "0") Integer searchTypeInt,
-                                                           @RequestParam(name = "resultType") List<Integer> resultTypeInt, @RequestParam(name = "startTime", required = false, defaultValue = "-9999-01-01") LocalDate startTime, @RequestParam(name = "endTime", required = false, defaultValue = "9999-12-31") LocalDate endTime, @RequestParam(name = "pageSize", required = false, defaultValue = "10") Integer pageSize, @RequestParam(name = "pageNumber", required = false, defaultValue = "0") Integer pageNumber, HttpServletRequest request, HttpServletResponse response) {
+                                                           @RequestParam(name = "resultType") List<Integer> resultTypeInt,
+                                                           @RequestParam(name = "startTime", required = false,
+                                                                   defaultValue = "-9999-01-01") LocalDate startTime,
+                                                           @RequestParam(name = "endTime", required = false,
+                                                                   defaultValue = "9999-12-31") LocalDate endTime,
+                                                           @RequestParam(name = "pageSize", required = false,
+                                                                   defaultValue = "10") Integer pageSize,
+                                                           @RequestParam(name = "pageNumber", required = false,
+                                                                   defaultValue = "0") Integer pageNumber,
+                                                           HttpServletRequest request, HttpServletResponse response) {
         try {
             try {
                 validatePageable(pageSize, pageNumber);
@@ -282,10 +304,16 @@ public class SearchController {
             SearchHits<MirrorOfLaw> searchResult;
             if (searchType == SearchType.ALL) {
                 searchResult =
-                        elasticsearchOperations.search(SearchTemplateQuery.builder().withId("search_by_all").withParams(Map.of("input", input, "startTime", startTime.toString(), "endTime", endTime.toString(), "size", pageable.getPageSize(), "from", pageable.getOffset(), "boundary_chars", boundary_chars, "type", resultType)).build(), MirrorOfLaw.class);
+                        elasticsearchOperations.search(SearchTemplateQuery.builder().withId("search_by_all")
+                                .withParams(Map.of("input", input, "startTime", startTime.toString(), "endTime",
+                                        endTime.toString(), "size", pageable.getPageSize(), "from",
+                                        pageable.getOffset(), "boundary_chars", boundary_chars, "type", resultType)).build(), MirrorOfLaw.class);
             } else {
                 searchResult =
-                        elasticsearchOperations.search(SearchTemplateQuery.builder().withId("search_by_single").withParams(Map.of("input", input, "field", fields, "startTime", startTime.toString(), "endTime", endTime.toString(), "size", pageable.getPageSize(), "from", pageable.getOffset(), "boundary_chars", boundary_chars, "type", resultType)).build(), MirrorOfLaw.class);
+                        elasticsearchOperations.search(SearchTemplateQuery.builder().withId("search_by_single")
+                                .withParams(Map.of("input", input, "field", fields, "startTime", startTime.toString()
+                                        , "endTime", endTime.toString(), "size", pageable.getPageSize(), "from",
+                                        pageable.getOffset(), "boundary_chars", boundary_chars, "type", resultType)).build(), MirrorOfLaw.class);
             }
             searchList.setTotal((int) searchResult.getTotalHits());
             for (SearchHit<MirrorOfLaw> data : searchResult) {
