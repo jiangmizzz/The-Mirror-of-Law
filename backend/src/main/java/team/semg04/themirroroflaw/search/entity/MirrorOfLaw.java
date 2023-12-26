@@ -32,4 +32,10 @@ public class MirrorOfLaw {
     private Integer like;
     @Field(name = "dislike", type = FieldType.Integer)
     private Integer dislike;
+
+    // 裁判文书
+    @Field(name = "cause", type = FieldType.Text)
+    private String cause;
+    @Field(name = "caseId", type = FieldType.Keyword)
+    private String caseId;
 }

@@ -395,6 +395,10 @@ public class SearchController {
             detail.setContent(document.getContent());
             detail.setResultType(document.getType());
             detail.setLink(document.getUrl());
+
+            // 裁判文书
+            detail.setCause(document.getCause());
+            detail.setCaseId(document.getCaseId());
             log.debug("Get search result detail success. Id: " + id);
             return new ResponseEntity<>(new Response<>(true, detail, 0, ""), HttpStatus.OK);
         } catch (Exception e) {
@@ -537,6 +541,7 @@ public class SearchController {
             for (SearchHit<MirrorOfLaw> data : lawsData) {
                 Related related = new Related();
                 related.setId(data.getContent().getId());
+                related.setType(data.getContent().getType());
                 related.setTitle(data.getContent().getTitle());
                 relatedList.getLinks().add(related);
             }
@@ -578,6 +583,10 @@ public class SearchController {
         private String content;
         private Integer resultType;
         private String link;
+
+        // 裁判文书
+        private String cause;
+        private String caseId;
     }
 
     @Data
@@ -607,6 +616,7 @@ public class SearchController {
     @Data
     public static class Related {
         private String id;
+        private Integer type;
         private String title;
     }
 
