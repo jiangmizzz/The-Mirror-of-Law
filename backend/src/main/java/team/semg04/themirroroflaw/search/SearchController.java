@@ -216,7 +216,7 @@ public class SearchController {
         Script moreLikeThis = Script.builder().withId("search_more_like_this").withLanguage("mustache").withSource("""
                 {
                    "_source": {
-                     "includes": ["id","title"]
+                     "includes": ["id","type","title"]
                    },
                    "query": {
                      "more_like_this": {
