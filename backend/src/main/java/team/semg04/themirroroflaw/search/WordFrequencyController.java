@@ -52,7 +52,7 @@ public class WordFrequencyController {
     public ResponseEntity<Response<List<Map<String, Object>> >> summarizeInfo(@RequestParam(name = "id") String id, @RequestParam(name = "type") Integer typeInt) {
         List<Map<String, Object>> wordFrequencyList;
         try {
-            if(typeInt == DocumentType.LAW.ordinal() || typeInt == DocumentType.JUDGEMENT.ordinal()) {
+            if(typeInt >=0 && typeInt <=3) {
                 MirrorOfLaw laws = elasticsearchOperations.get(id, MirrorOfLaw.class);
                 if (laws == null) {
                     log.error("Get search result detail error: Document not found. Id: " + id);
@@ -70,10 +70,6 @@ public class WordFrequencyController {
             return new ResponseEntity<>(new Response<>(false, null, HttpStatus.INTERNAL_SERVER_ERROR.value(),
                     "Internal server error."), HttpStatus.INTERNAL_SERVER_ERROR);
         }
-    }
-
-    public enum DocumentType {
-        LAW, JUDGEMENT
     }
 
 }
