@@ -91,8 +91,8 @@ export default function SearchPage() {
         // 设置条件过滤多余请求（未登录时使用假数据）
         return false;
       }
-      //   return "/personal/recommends"; // TODO:接口类型param不明确
-      return false;
+      return "/personal/recommends";
+      //   return false;
     }, getFetcher);
     console.log("RecommendDataList Data:", data);
 

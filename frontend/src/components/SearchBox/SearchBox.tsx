@@ -30,13 +30,22 @@ import { useUserStore } from "../../stores/userStore.tsx";
 
 const { RangePicker } = DatePicker;
 
-// TODO， 没有相应接口，mock数据
-async function getAiResponse(userMessage: string): Promise<string> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(`AI 模型的响应：你说的是 "${userMessage}" 吗？`);
-    }, 1000);
-  });
+// // TODO， 没有相应接口，mock数据
+// async function getAiResponse(userMessage: string): Promise<string> {
+//   return new Promise((resolve) => {
+//     setTimeout(() => {
+//       resolve(`AI 模型的响应：你说的是 "${userMessage}" 吗？`);
+//     }, 1000);
+//   });
+// }
+
+// AI 部分
+interface AiExtractResponse {
+  res: string;
+}
+
+interface AiConcludeResponse {
+  res: string;
 }
 
 //子组件，搜索组件
@@ -63,8 +72,10 @@ export default function SearchBox(props: {
     useState<CheckboxValueType[]>(defaultResultTypes);
   const [timeRange, setTimeRange] = useState<string[]>(["", ""]);
   const [updateTime, setUpdateTime] = useState<number>(0); //更新时间
-  const [ifAi, setAi] = useState<boolean>(false);
+  const [ifAi, setAi] = useState<boolean>(false); // AI抽屉是否打开的开关
   const [inputValueAI, setInputValueAI] = useState(""); // AI chatbot textarea中的文本（用户输入的信息）
+  const [fetchAiData, setFetchAiData] = useState(false); // 是否发起AI请求的开关，避免一直发请求浪费token
+  const [fetchAiConclude, setFetchAiConclude] = useState(false); // 是否开启AI问答功能（用户选择文本进行总结）
 
   // 关闭抽屉
   const onClose = () => {
@@ -76,7 +87,7 @@ export default function SearchBox(props: {
   const [chatMessages, setChatMessages] = useState([
     {
       content:
-        "你好！我是AI智能助手，我将对搜索框输入的内容进行提取关键词并呈现给你。",
+        "你好！我是AI智能助手，我将对搜索框输入的内容进行提取关键词并呈现给你。或者你也可以选择一段文本输入，我会对这段文本进行一个总结",
       type: "ai",
     },
   ]);
@@ -86,13 +97,6 @@ export default function SearchBox(props: {
     setInputValueAI("");
   }, [chatMessages]);
 
-  // AI 部分
-  interface AiExtractResponse {
-    res: string;
-  }
-
-  const [fetchAiData, setFetchAiData] = useState(false);
-
   const {
     data: AIdata,
     error: AIerror,
@@ -100,20 +104,52 @@ export default function SearchBox(props: {
   } = useSWR<AiExtractResponse>(
     fetchAiData && input ? `/ai/extract?input=${input}` : null,
     getFetcher
-    // {
-    //   refreshInterval: 1000,
-    // }
   );
+
+  const {
+    data: AIConcludedata,
+    error: AIConcludeError,
+    isLoading: AIConcludeisLoading,
+  } = useSWR<AiConcludeResponse>(() => {
+    if (
+      fetchAiData &&
+      inputValueAI &&
+      inputValueAI.trim() != "" &&
+      fetchAiConclude
+    ) {
+      // 设置条件过滤多余请求（未登录时使用假数据）
+      return `/ai/conclude?content=${inputValueAI}`;
+    } else {
+      return false;
+    }
+  }, getFetcher);
 
   // 在 useEffect 钩子中处理 AI 服务
   useEffect(() => {
     if (fetchAiData && AIdata) {
       setChatMessages((prevMessages) => [
         ...prevMessages,
-        { content: AIdata.toString(), type: "ai" },
+        { content: "关键词提取：" + AIdata.toString(), type: "ai" },
       ]);
     }
   }, [fetchAiData, AIdata]);
+
+  useEffect(() => {
+    if (fetchAiData && AIConcludedata && fetchAiConclude) {
+      // 将用户消息添加到聊天中
+      setChatMessages((prevMessages) => [
+        ...prevMessages,
+        { content: inputValueAI, type: "user" },
+      ]);
+      setChatMessages((prevMessages) => [
+        ...prevMessages,
+        { content: "文本总结：" + AIConcludedata.toString(), type: "ai" },
+      ]);
+      setFetchAiConclude(false);
+      // 清空输入
+      setInputValueAI("");
+    }
+  }, [fetchAiData, AIConcludedata, fetchAiConclude, inputValueAI]);
 
   // 处理错误
   useEffect(() => {
@@ -123,6 +159,13 @@ export default function SearchBox(props: {
     }
   }, [AIerror]);
 
+  useEffect(() => {
+    if (AIConcludeError) {
+      console.error("Failed to fetch AI conclusion:", AIConcludeError);
+      message.error("获取 AI 总结失败！");
+    }
+  }, [AIConcludeError]);
+
   // 当获取 AI 摘要的内容在加载时，显示加载效果
   useEffect(() => {
     if (AIisLoading) {
@@ -130,6 +173,13 @@ export default function SearchBox(props: {
       message.info("AI摘要数据正在加载中……");
     }
   }, [AIisLoading]);
+
+  useEffect(() => {
+    if (AIConcludeisLoading) {
+      console.error("Loading AI conclusion:", AIConcludeisLoading);
+      message.info("AI总结数据正在加载中……");
+    }
+  }, [AIConcludeisLoading]);
 
   const handleAIService = () => {
     // 当用户点击抽屉时调用此函数
@@ -151,31 +201,28 @@ export default function SearchBox(props: {
     console.log("Input Value:", inputValueAI);
     const userMessage = inputValueAI.trim();
     // 空消息不做任何处理
-    if (userMessage === "") return;
-
-    // 将用户消息添加到聊天中
-    setChatMessages((prevMessages) => [
-      ...prevMessages,
-      { content: userMessage, type: "user" },
-    ]);
-
-    // TODO: 将用户消息发送到 AI 模型并获取 AI 响应
-    try {
-      // 发送用户消息到 AI 模型并获取 AI 响应
-      const aiResponse = await getAiResponse(userMessage);
-
-      // 将 AI 响应添加到聊天中
-      setChatMessages((prevMessages) => [
-        ...prevMessages,
-        { content: aiResponse, type: "ai" },
-      ]);
-    } catch (error) {
-      console.error("Failed to fetch AI response:", error);
-      message.error("获取 AI 响应失败！");
+    if (userMessage === "") {
+      message.warning("请不要输入空数据！");
+      return;
+    } else {
+      setFetchAiConclude(true);
     }
+    // // TODO: 将用户消息发送到 AI 模型并获取 AI 响应
+    // try {
+    //   // 发送用户消息到 AI 模型并获取 AI 响应
+    //   const aiResponse = await getAiResponse(userMessage);
 
-    // 清除输入
-    setInputValueAI("");
+    //   // 将 AI 响应添加到聊天中
+    //   setChatMessages((prevMessages) => [
+    //     ...prevMessages,
+    //     { content: aiResponse, type: "ai" },
+    //   ]);
+    // } catch (error) {
+    //   console.error("Failed to fetch AI response:", error);
+    //   message.error("获取 AI 响应失败！");
+    // }
+    // // 清除输入
+    // setInputValueAI("");
   };
 
   //在result页打开时需要初始化搜索选项
@@ -392,7 +439,10 @@ export default function SearchBox(props: {
           }
         >
           <div className="chat-container">
-            <Spin tip="Loading..." spinning={AIisLoading}>
+            <Spin
+              tip="Loading..."
+              spinning={AIisLoading || AIConcludeisLoading}
+            >
               {chatMessages.map((message, index) => (
                 <div key={index} className="chat-message-box">
                   {message.type === "ai" && ( // AI message, 头像放在文本框前

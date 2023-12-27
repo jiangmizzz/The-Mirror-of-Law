@@ -40,13 +40,29 @@ import mainLogo from "../../assets/main-logo.png";
 import ImageViewer from "./component/ImageViewer.tsx";
 import ScrollToBottomButton from "./component/ScrollToBottomButton.tsx";
 
-// TODO， 没有相应接口，mock数据
-async function getAiResponse(userMessage: string): Promise<string> {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(`AI 模型的响应：你说的是 "${userMessage}" 吗？`);
-    }, 1000);
-  });
+// // TODO， 没有相应接口，mock数据
+// async function getAiResponse(userMessage: string): Promise<string> {
+//   return new Promise((resolve) => {
+//     setTimeout(() => {
+//       resolve(`AI 模型的响应：你说的是 "${userMessage}" 吗？`);
+//     }, 1000);
+//   });
+// }
+
+// 向后端发起请求获取详情信息的返回体
+interface DetailData {
+  title: string;
+  source: string;
+  publishTime: string; // ISO 8601 时间格式
+  feedbackCnt: {
+    likes: number;
+    dislikes: number;
+  };
+  content: string;
+  resultType: number;
+  link: string;
+  cause: string; // 案号
+  caseId: string; // 案由
 }
 
 const DetailPage: React.FC = () => {
@@ -61,9 +77,11 @@ const DetailPage: React.FC = () => {
   const [ifOpen, setOpen] = useState<boolean>(false); // 是否启用AI辅助功能（打开抽屉）
   const [isOpenFloatTooltip, setIsOpenFloatTooltip] = useState(true);
   const [isClickOn, setIsClickOn] = useState(true); // 是否开启快乐特效（鼠标点击动效）
+  const [fetchAiConclude, setFetchAiConclude] = useState(false); // 是否开启AI问答功能（用户选择文本进行总结）
   //   const userStore = useUserStore(); //全局用户状态管理器
 
   const [detailData, setDetailData] = useState<DetailData | null>(null); // 在 DetailPage 组件中定义一个状态变量用于存储详情数据
+  const [isGetDetail, setIsGetDetail] = useState(false);
   const navigate = useNavigate();
 
   // AI部分
@@ -71,11 +89,15 @@ const DetailPage: React.FC = () => {
     res: string;
   }
 
+  interface AiConcludeResponse {
+    res: string;
+  }
+
   // 聊天消息的状态
   const [chatMessages, setChatMessages] = useState([
     {
       content:
-        "你好！我是AI智能助手，我将帮你对这篇文章进行一个总结，并呈现一份内容概要。",
+        "你好！我是AI智能助手，我将帮你对这篇文章进行一个总结，并呈现一份内容概要。或者你也可以选择一段文本输入，我会对这段文本进行一个总结",
       type: "ai",
     },
   ]);
@@ -104,16 +126,51 @@ const DetailPage: React.FC = () => {
   }, getFetcher);
   console.log("AI summary result:" + AIdata);
 
+  const {
+    data: AIConcludedata,
+    error: AIConcludeError,
+    isLoading: AIConcludeisLoading,
+  } = useSWR<AiConcludeResponse>(() => {
+    if (
+      fetchAiData &&
+      inputValue &&
+      inputValue.trim() != "" &&
+      fetchAiConclude
+    ) {
+      // 设置条件过滤多余请求（未登录时使用假数据）
+      return `/ai/conclude?content=${inputValue}`;
+    } else {
+      return false;
+    }
+  }, getFetcher);
+
   // 当获取 AI 摘要成功时，更新 chatMessages
   useEffect(() => {
     if (fetchAiData && AIdata) {
       setIsGetResponse(true);
       setChatMessages((prevMessages) => [
         ...prevMessages,
-        { content: AIdata.toString(), type: "ai" },
+        { content: "文本摘要：" + AIdata.toString(), type: "ai" },
       ]);
     }
   }, [fetchAiData, AIdata]);
+
+  useEffect(() => {
+    if (fetchAiData && AIConcludedata && fetchAiConclude) {
+      // 将用户消息添加到聊天中
+      setChatMessages((prevMessages) => [
+        ...prevMessages,
+        { content: inputValue, type: "user" },
+      ]);
+      setChatMessages((prevMessages) => [
+        ...prevMessages,
+        { content: "文本总结：" + AIConcludedata.toString(), type: "ai" },
+      ]);
+      setFetchAiConclude(false);
+      // 清空输入
+      setInputValue("");
+    }
+  }, [fetchAiData, AIConcludedata, fetchAiConclude, inputValue]);
 
   // 当获取 AI 摘要失败时，显示错误信息
   useEffect(() => {
@@ -123,6 +180,13 @@ const DetailPage: React.FC = () => {
     }
   }, [AIerror]);
 
+  useEffect(() => {
+    if (AIConcludeError) {
+      console.error("Failed to fetch AI conclusion:", AIConcludeError);
+      message.error("获取 AI 总结失败！");
+    }
+  }, [AIConcludeError]);
+
   // 当获取 AI 总结的内容在加载时，显示加载效果
   useEffect(() => {
     if (AIisLoading) {
@@ -131,36 +195,48 @@ const DetailPage: React.FC = () => {
     }
   }, [AIisLoading]);
 
+  useEffect(() => {
+    if (AIConcludeisLoading) {
+      console.error("Loading AI conclusion:", AIConcludeisLoading);
+      message.info("AI总结数据正在加载中……");
+    }
+  }, [AIConcludeisLoading]);
+
   // 处理用户输入并获取 AI 响应
   const handleUserInput = async () => {
     console.log("Input Value:", inputValue);
     const userMessage = inputValue.trim();
     // 空消息不做任何处理
-    if (userMessage === "") return;
-
-    // 将用户消息添加到聊天中
-    setChatMessages((prevMessages) => [
-      ...prevMessages,
-      { content: userMessage, type: "user" },
-    ]);
-
-    // TODO: 将用户消息发送到 AI 模型并获取 AI 响应
-    try {
-      // 发送用户消息到 AI 模型并获取 AI 响应
-      const aiResponse = await getAiResponse(userMessage);
-
-      // 将 AI 响应添加到聊天中
-      setChatMessages((prevMessages) => [
-        ...prevMessages,
-        { content: aiResponse, type: "ai" },
-      ]);
-    } catch (error) {
-      console.error("Failed to fetch AI response:", error);
-      message.error("获取 AI 响应失败！");
+    if (userMessage === "") {
+      message.warning("请不要输入空数据！");
+      return;
+    } else {
+      setFetchAiConclude(true);
     }
 
-    // 清除输入
-    setInputValue("");
+    // // 将用户消息添加到聊天中
+    // setChatMessages((prevMessages) => [
+    //   ...prevMessages,
+    //   { content: userMessage, type: "user" },
+    // ]);
+
+    // // TODO: 将用户消息发送到 AI 模型并获取 AI 响应
+    // try {
+    //   // 发送用户消息到 AI 模型并获取 AI 响应
+    //   const aiResponse = await getAiResponse(userMessage);
+
+    //   // 将 AI 响应添加到聊天中
+    //   setChatMessages((prevMessages) => [
+    //     ...prevMessages,
+    //     { content: aiResponse, type: "ai" },
+    //   ]);
+    // } catch (error) {
+    //   console.error("Failed to fetch AI response:", error);
+    //   message.error("获取 AI 响应失败！");
+    // }
+
+    // // 清除输入
+    // setInputValue("");
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -199,23 +275,6 @@ const DetailPage: React.FC = () => {
   };
 
   // 获取详情数据部分
-  // 向后端发起请求获取详情信息的返回体
-  interface DetailData {
-    title: string;
-    source: string;
-    publishTime: string; // ISO 8601 时间格式
-    feedbackCnt: {
-      likes: number;
-      dislikes: number;
-    };
-    content: string;
-    resultType: number;
-    link: string;
-    cause: string; // 案号
-    caseId: string; // 案由
-  }
-
-  const [isGetDetail, setIsGetDetail] = useState(false);
   // 调用SWR hook来获取详情页的数据 （判断请求条件）
   const { data, error, isLoading } = useSWR<DetailData>(() => {
     if (isGetDetail) {
@@ -523,7 +582,10 @@ const DetailPage: React.FC = () => {
                 }
               >
                 <div className="chat-container">
-                  <Spin tip="Loading..." spinning={AIisLoading}>
+                  <Spin
+                    tip="Loading..."
+                    spinning={AIisLoading || AIConcludeisLoading}
+                  >
                     {chatMessages.map((message, index) => (
                       <div key={index} className="chat-message-box">
                         {message.type === "ai" && ( // AI message, 头像放在文本框前
