@@ -85,7 +85,7 @@ public class AIController {
         String tooLongMessage = "文档内容过长，已自动截取部分内容进行总结：\n";
         String sensitiveMessage = "文档可能包含敏感信息，无法进行总结！";
         try {
-            if (typeInt == DocumentType.LAW.ordinal() || typeInt == DocumentType.JUDGEMENT.ordinal()) {
+            if (typeInt >= 0 && typeInt <=3) {
                 MirrorOfLaw laws = elasticsearchOperations.get(id, MirrorOfLaw.class);
                 if (laws == null) {
                     log.error("Get search result detail error: Document not found. Id: " + id);
@@ -116,8 +116,41 @@ public class AIController {
         }
     }
 
-    public enum DocumentType {
-        LAW, JUDGEMENT
-    }
+    @Operation(summary = "文档内容", description = "对输入内容进⾏总结，⽣成⼀段⽂字概要")
+    @Parameters({
+            @Parameter(name = "content", description = "文档内容")
+    })
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "成功"),
+            @ApiResponse(responseCode = "400", description = "请求参数错误", content = @Content(schema =
+            @Schema(implementation = Response.class))),
+            @ApiResponse(responseCode = "500", description = "服务器内部错误", content = @Content(schema =
+            @Schema(implementation = Response.class)))
+    })
+    @GetMapping("/summarize")
+    public ResponseEntity<Response<String>> summarizeInfo(@RequestParam(name = "content") String content) {
+        String result;
+        boolean tooLong = false;
+        String tooLongMessage = "输入内容过长，已自动截取部分内容进行总结：\n";
+        String sensitiveMessage = "输入内容可能包含敏感信息，无法进行总结！";
+        try {
+                if (content.length() >= 4096 - summarizePrompt.length()) {
+                    content = content.substring(0, 4096 - summarizePrompt.length());
+                    tooLong = true;
+                }
+                result = SparkModelConnector.getAnswer(summarizePrompt + content);
+                if (result.isEmpty()) {
+                    return new ResponseEntity<>(new Response<>(true, sensitiveMessage, 0, ""), HttpStatus.OK);
+                }
+            if (!tooLong) {
+                return new ResponseEntity<>(new Response<>(true, result, 0, ""), HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(new Response<>(true, tooLongMessage + result, 0, ""), HttpStatus.OK);
+            }
 
+        } catch (Exception e) {
+            return new ResponseEntity<>(new Response<>(false, null, HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                    "Internal server error."), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
 }
