@@ -127,7 +127,7 @@ public class AIController {
             @ApiResponse(responseCode = "500", description = "服务器内部错误", content = @Content(schema =
             @Schema(implementation = Response.class)))
     })
-    @GetMapping("/summarize")
+    @GetMapping("/conclude")
     public ResponseEntity<Response<String>> summarizeInfo(@RequestParam(name = "content") String content) {
         String result;
         boolean tooLong = false;
