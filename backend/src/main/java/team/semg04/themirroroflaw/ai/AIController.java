@@ -85,7 +85,7 @@ public class AIController {
         String tooLongMessage = "文档内容过长，已自动截取部分内容进行总结：\n";
         String sensitiveMessage = "文档可能包含敏感信息，无法进行总结！";
         try {
-            if (typeInt >= 0 && typeInt <=3) {
+            if (typeInt == DocumentType.LAW.ordinal() || typeInt == DocumentType.JUDGEMENT.ordinal()) {
                 MirrorOfLaw laws = elasticsearchOperations.get(id, MirrorOfLaw.class);
                 if (laws == null) {
                     log.error("Get search result detail error: Document not found. Id: " + id);
@@ -153,4 +153,5 @@ public class AIController {
                     "Internal server error."), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
 }

@@ -104,26 +104,26 @@ public class SearchController {
                   "query": {
                     "bool": {
                       "must": [
-                                {
-                                  "multi_match": {
-                                    "query": "{{{input}}}",
-                                    "fields": ["content", "title^3"],
-                                    "analyzer": "ik_smart"
-                                  }
-                                },
-                                {
-                                  "terms": {
-                                    "type": {{{type}}}
-                                  }
-                                }
-                              ],
-                      "should": {
+                        {
                           "multi_match": {
+                            "query": "{{{input}}}",
+                            "fields": ["content", "title^3"],
+                            "analyzer": "ik_smart"
+                          }
+                        },
+                        {
+                          "terms": {
+                            "type": {{{type}}}
+                          }
+                        }
+                      ],
+                      "should": {
+                        "multi_match": {
                           "query": "中华人民共和国",
                           "fields": ["title"],
                           "analyzer": "ik_smart",
                           "boost": 2
-                          }
+                        }
                       }
                     }
                   },
@@ -152,19 +152,19 @@ public class SearchController {
                         "highlight_query": {
                           "bool": {
                             "must": [
-                                {
-                                  "multi_match": {
-                                    "query": "{{{input}}}",
-                                    "fields": ["content"],
-                                    "analyzer": "ik_smart"
-                                  }
-                                },
-                                {
-                                  "terms": {
-                                    "type": {{{type}}}
-                                  }
+                              {
+                                "multi_match": {
+                                  "query": "{{{input}}}",
+                                  "fields": ["content"],
+                                  "analyzer": "ik_smart"
                                 }
-                              ]
+                              },
+                              {
+                                "terms": {
+                                  "type": {{{type}}}
+                                }
+                              }
+                            ]
                           }
                         }
                       }
@@ -181,26 +181,26 @@ public class SearchController {
                   "query": {
                     "bool": {
                       "must": [
-                                {
-                                  "multi_match": {
-                                    "query": "{{{input}}}",
-                                    "fields": ["{{{field}}}"],
-                                    "analyzer": "ik_smart"
-                                  }
-                                },
-                                {
-                                  "terms": {
-                                    "type": {{{type}}}
-                                  }
-                                }
-                              ],
-                      "should": {
+                        {
                           "multi_match": {
+                            "query": "{{{input}}}",
+                            "fields": ["{{{field}}}"],
+                            "analyzer": "ik_smart"
+                          }
+                        },
+                        {
+                          "terms": {
+                            "type": {{{type}}}
+                          }
+                        }
+                      ],
+                      "should": {
+                        "multi_match": {
                           "query": "中华人民共和国",
                           "fields": ["title"],
                           "analyzer": "ik_smart",
                           "boost": 2
-                          }
+                        }
                       }
                     }
                   },
@@ -553,7 +553,6 @@ public class SearchController {
                     "Internal server error."), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
 
     public enum SearchType {
         ALL, TITLE, SOURCE
