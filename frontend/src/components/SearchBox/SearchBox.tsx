@@ -122,6 +122,7 @@ export default function SearchBox(props: {
     // 当用户点击抽屉时调用此函数
     console.log("Input value:" + input);
     if (!input) {
+      message.info("您还没有输入任何内容！");
       return;
     }
     setFetchAiData(true);
