@@ -55,7 +55,7 @@ export default function SearchPage() {
       type: 0,
     },
     {
-      title: "伊犁哈萨克自治州施行《中华人民共和国婚姻法》补充规定 ",
+      title: "伊犁哈萨克自治州施行《中华人民共和国婚姻法》补充规定",
       id: "a1e5f05ca5764f519eb871e7d40a4363",
       type: 0,
     },
@@ -217,13 +217,23 @@ export default function SearchPage() {
                 <Button
                   key={item.id}
                   type="link"
+                  style={{
+                    overflow: "hidden",
+                    whiteSpace: "nowrap",
+                    textOverflow: "ellipsis",
+                  }}
                   onClick={() => {
                     navigate(`/detail/${item.id}/${item.type}`, {
                       state: { previousLocation: location.pathname },
                     });
                   }}
                 >
-                  {index + 1 + ". " + item.title}
+                  {index +
+                    1 +
+                    ". " +
+                    (item.title.length > 40
+                      ? item.title.substring(0, 40) + "..."
+                      : item.title)}
                 </Button>
               );
             })}

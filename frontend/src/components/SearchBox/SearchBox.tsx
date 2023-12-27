@@ -10,6 +10,7 @@ import {
   Drawer,
   message,
   Avatar,
+  Spin,
 } from "antd";
 import { BulbOutlined, UserOutlined } from "@ant-design/icons";
 // import type { MenuProps } from "antd";
@@ -92,7 +93,11 @@ export default function SearchBox(props: {
 
   const [fetchAiData, setFetchAiData] = useState(false);
 
-  const { data: AIdata, error: AIerror } = useSWR<AiExtractResponse>(
+  const {
+    data: AIdata,
+    error: AIerror,
+    isLoading: AIisLoading,
+  } = useSWR<AiExtractResponse>(
     fetchAiData && input ? `/ai/extract?input=${input}` : null,
     getFetcher
     // {
@@ -117,6 +122,14 @@ export default function SearchBox(props: {
       message.error("获取 AI 摘要失败！");
     }
   }, [AIerror]);
+
+  // 当获取 AI 摘要的内容在加载时，显示加载效果
+  useEffect(() => {
+    if (AIisLoading) {
+      console.error("Loading AI summary:", AIisLoading);
+      message.info("AI摘要数据正在加载中……");
+    }
+  }, [AIisLoading]);
 
   const handleAIService = () => {
     // 当用户点击抽屉时调用此函数
@@ -379,38 +392,40 @@ export default function SearchBox(props: {
           }
         >
           <div className="chat-container">
-            {chatMessages.map((message, index) => (
-              <div key={index} className="chat-message-box">
-                {message.type === "ai" && ( // AI message, 头像放在文本框前
-                  <div className="avatar">
-                    <img
-                      src={AI_avatar}
-                      alt="AI Avatar"
-                      style={{
-                        width: "160%",
-                        height: "160%",
-                        borderRadius: "50%",
-                      }}
-                    />
+            <Spin tip="Loading..." spinning={AIisLoading}>
+              {chatMessages.map((message, index) => (
+                <div key={index} className="chat-message-box">
+                  {message.type === "ai" && ( // AI message, 头像放在文本框前
+                    <div className="avatar">
+                      <img
+                        src={AI_avatar}
+                        alt="AI Avatar"
+                        style={{
+                          width: "160%",
+                          height: "160%",
+                          borderRadius: "50%",
+                        }}
+                      />
+                    </div>
+                  )}
+                  <div
+                    className={`message-content ${
+                      message.type === "ai" ? "ai" : "user"
+                    }`}
+                  >
+                    {message.content}
                   </div>
-                )}
-                <div
-                  className={`message-content ${
-                    message.type === "ai" ? "ai" : "user"
-                  }`}
-                >
-                  {message.content}
+                  {message.type === "user" && ( // user message, 头像放在文本框后
+                    <div className="avatar">
+                      <Avatar
+                        style={{ backgroundColor: "#2e95d3" }}
+                        icon={<UserOutlined />}
+                      />
+                    </div>
+                  )}
                 </div>
-                {message.type === "user" && ( // user message, 头像放在文本框后
-                  <div className="avatar">
-                    <Avatar
-                      style={{ backgroundColor: "#2e95d3" }}
-                      icon={<UserOutlined />}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
+              ))}
+            </Spin>
           </div>
         </Drawer>
         <Space.Compact size="large">

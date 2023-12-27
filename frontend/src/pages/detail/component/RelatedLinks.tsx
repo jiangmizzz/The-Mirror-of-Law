@@ -96,26 +96,6 @@ const RelatedLinks: React.FC<RelatedProps> = ({
     onRelatedLinkClick(itemId, itemType);
   };
 
-  //   useEffect(() => {
-  //     setRelatedList([
-  //       { title: "中共中央印发《全国干部教育培训规划(2023—2027年)》", id: 1 },
-  //       {
-  //         title:
-  //           "中共中央办公厅、国务院办公厅关于调整应急管理部职责机构编制的通知",
-  //         id: 2,
-  //       },
-  //       {
-  //         title: "中共中央办公厅、国务院办公厅印发《深化集体林权制度改革方案》",
-  //         id: 3,
-  //       },
-  //       {
-  //         title:
-  //           "中共中央办公厅、国务院办公厅关于调整中国人民银行职责机构编制的通知",
-  //         id: 4,
-  //       },
-  //     ]);
-  //   }, []);
-
   // 在加载状态下显示 loading 界面
   if (relatedLoading) {
     // 调用showLoading()函数来显示加载状态
@@ -213,7 +193,12 @@ const RelatedLinks: React.FC<RelatedProps> = ({
                 )
               }
             >
-              {index + 1 + ". " + item.title}
+              {index +
+                1 +
+                ". " +
+                (item.title.length > 40
+                  ? item.title.substring(0, 40) + "..."
+                  : item.title)}
             </Button>
           ))}
       </div>

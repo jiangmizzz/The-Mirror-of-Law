@@ -15,6 +15,7 @@ import {
   Avatar,
   Empty,
   Button,
+  Spin,
 } from "antd";
 import {
   ArrowLeftOutlined,
@@ -90,7 +91,11 @@ const DetailPage: React.FC = () => {
   const [isGetResponse, setIsGetResponse] = useState(false);
 
   // 使用 useSWR 发送请求
-  const { data: AIdata, error: AIerror } = useSWR<AiSummaryResponse>(() => {
+  const {
+    data: AIdata,
+    error: AIerror,
+    isLoading: AIisLoading,
+  } = useSWR<AiSummaryResponse>(() => {
     if (!fetchAiData || isGetResponse) {
       // 设置条件防止发送多次请求
       return false;
@@ -117,6 +122,14 @@ const DetailPage: React.FC = () => {
       message.error("获取 AI 摘要失败！");
     }
   }, [AIerror]);
+
+  // 当获取 AI 总结的内容在加载时，显示加载效果
+  useEffect(() => {
+    if (AIisLoading) {
+      console.error("Loading AI summary:", AIisLoading);
+      message.info("AI总结数据正在加载中……");
+    }
+  }, [AIisLoading]);
 
   // 处理用户输入并获取 AI 响应
   const handleUserInput = async () => {
@@ -510,38 +523,40 @@ const DetailPage: React.FC = () => {
                 }
               >
                 <div className="chat-container">
-                  {chatMessages.map((message, index) => (
-                    <div key={index} className="chat-message-box">
-                      {message.type === "ai" && ( // AI message, 头像放在文本框前
-                        <div className="avatar">
-                          <img
-                            src={AI_avatar}
-                            alt="AI Avatar"
-                            style={{
-                              width: "160%",
-                              height: "160%",
-                              borderRadius: "50%",
-                            }}
-                          />
+                  <Spin tip="Loading..." spinning={AIisLoading}>
+                    {chatMessages.map((message, index) => (
+                      <div key={index} className="chat-message-box">
+                        {message.type === "ai" && ( // AI message, 头像放在文本框前
+                          <div className="avatar">
+                            <img
+                              src={AI_avatar}
+                              alt="AI Avatar"
+                              style={{
+                                width: "160%",
+                                height: "160%",
+                                borderRadius: "50%",
+                              }}
+                            />
+                          </div>
+                        )}
+                        <div
+                          className={`message-content ${
+                            message.type === "ai" ? "ai" : "user"
+                          }`}
+                        >
+                          {message.content}
                         </div>
-                      )}
-                      <div
-                        className={`message-content ${
-                          message.type === "ai" ? "ai" : "user"
-                        }`}
-                      >
-                        {message.content}
+                        {message.type === "user" && ( // user message, 头像放在文本框后
+                          <div className="avatar">
+                            <Avatar
+                              style={{ backgroundColor: "#2e95d3" }}
+                              icon={<UserOutlined />}
+                            />
+                          </div>
+                        )}
                       </div>
-                      {message.type === "user" && ( // user message, 头像放在文本框后
-                        <div className="avatar">
-                          <Avatar
-                            style={{ backgroundColor: "#2e95d3" }}
-                            icon={<UserOutlined />}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    ))}
+                  </Spin>
                 </div>
               </Drawer>
             </div>
