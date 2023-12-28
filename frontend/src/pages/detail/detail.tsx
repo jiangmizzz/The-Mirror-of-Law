@@ -84,6 +84,15 @@ const DetailPage: React.FC = () => {
   const [isGetDetail, setIsGetDetail] = useState(false);
   const navigate = useNavigate();
 
+  // 传给点赞子组件的回调函数，在用户反馈成功后重新获取页面数据
+  const handleFeedbackSuccess = () => {
+    // 重新渲染
+    mutate();
+    setIsGetDetail(false);
+    console.log("Feedback success!");
+    console.log("new feedback", feedbackCnt);
+  };
+
   // AI部分
   interface AiSummaryResponse {
     res: string;
@@ -263,6 +272,8 @@ const DetailPage: React.FC = () => {
   // 回到上一个页面
   const goBackToLastPage = () => {
     navigate(-1); // 返回上一页
+    mutate();
+    // window.location.reload();
   };
   // 处理回到顶部按钮的点击事件
   const handleBackTopClick = () => {
@@ -276,7 +287,7 @@ const DetailPage: React.FC = () => {
 
   // 获取详情数据部分
   // 调用SWR hook来获取详情页的数据 （判断请求条件）
-  const { data, error, isLoading } = useSWR<DetailData>(() => {
+  const { data, error, isLoading, mutate } = useSWR<DetailData>(() => {
     if (isGetDetail) {
       return false;
     }
@@ -472,6 +483,7 @@ const DetailPage: React.FC = () => {
                 initialLikes={feedbackCnt.likes}
                 initialDislikes={feedbackCnt.dislikes}
                 resultType={numericType}
+                onFeedbackSuccess={handleFeedbackSuccess} // 将回调函数作为 props 传递给子组件
               />
 
               <Divider />
