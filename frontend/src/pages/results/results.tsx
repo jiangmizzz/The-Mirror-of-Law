@@ -38,8 +38,8 @@ export default function ResultsPage() {
   const resultTypeMap = new Map([
     ["法律法规", "0"],
     ["裁判文书", "1"],
-    ["期刊论文", "2"],
-    ["法律观点", "3"],
+    ["期刊论文", "3"],
+    ["法律观点", "2"],
     ["资讯", "4"],
   ]);
   const pageSize = 10; //默认页面记录条数
@@ -93,7 +93,7 @@ export default function ResultsPage() {
       input: params.get("input")!,
       searchType: params.get("searchType")!,
       //TODO:等后端完全实现之后这里要改成全部包括
-      resultType: String(params.get("resultTypes") ? types : ["0"]),
+      resultType: String(params.get("resultTypes") ? types : ["0", "1", "2"]),
       startTime: params.get("startTime") ?? "-9999-01-01",
       endTime: params.get("endTime") ?? "9999-01-01",
       pageSize: String(pageSize),
@@ -280,7 +280,7 @@ export default function ResultsPage() {
     title: string; //该条结果的标题
     description: string; //内容摘要
     date: string; //内容发布或更新时间，使用 ISO 8601 时间格式
-    resultType: number; //该条结果的类型，0-法律法规，1-裁判文书，2-期刊论文，3-法律观点，4-资讯
+    resultType: number; //该条结果的类型，0-法律法规，1-裁判文书，2-法律观点
     source: string; //来源网站或作者
     feedbackCnt: {
       likes: number; //点赞数量
@@ -298,9 +298,9 @@ export default function ResultsPage() {
           return { img: rule, text: "法律法规" };
         case 1:
           return { img: judge, text: "裁判文书" };
-        case 2:
-          return { img: article, text: "期刊论文" };
         case 3:
+          return { img: article, text: "期刊论文" };
+        case 2:
           return { img: idea, text: "法律观点" };
         default: //4
           return { img: information, text: "资讯" };

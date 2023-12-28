@@ -46,8 +46,8 @@ export default function SearchBox(props: {
   const resultTypeOptions = [
     "法律法规",
     "裁判文书",
-    "期刊论文",
     "法律观点",
+    "期刊论文",
     "资讯",
   ];
   const userStore = useUserStore();
