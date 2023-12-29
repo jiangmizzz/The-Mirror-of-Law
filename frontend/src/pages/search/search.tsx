@@ -87,7 +87,11 @@ export default function SearchPage() {
     console.log("RecommendDataList Data:", recommendList);
 
     const { data, error, isLoading } = useSWR<RecommendDataList>(() => {
-      if (isGetResponse || !userStore.ifLogin) {
+      //   if (isGetResponse || !userStore.ifLogin) {
+      //     // 设置条件过滤多余请求（未登录时使用假数据）
+      //     return false;
+      //   }
+      if (isGetResponse) {
         // 设置条件过滤多余请求（未登录时使用假数据）
         return false;
       }
@@ -97,12 +101,17 @@ export default function SearchPage() {
     console.log("RecommendDataList Data:", data);
 
     useEffect(() => {
-      if (userStore.ifLogin) {
-        // 当数据变化时，更新 recommendList
-        if (data) {
-          setRecommendList(data);
-          setIsGetResponse(true);
-        }
+      //   if (userStore.ifLogin) {
+      //     // 当数据变化时，更新 recommendList
+      //     if (data) {
+      //       setRecommendList(data);
+      //       setIsGetResponse(true);
+      //     }
+      //   }
+      // 当数据变化时，更新 recommendList
+      if (data) {
+        setRecommendList(data);
+        setIsGetResponse(true);
       }
     }, [data, userStore.ifLogin]);
 
