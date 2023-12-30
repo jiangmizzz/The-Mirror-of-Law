@@ -63,7 +63,7 @@ export default function SearchBox(props: {
   const userStore = useUserStore();
   const [messageApi, contextHolder] = message.useMessage();
   const navigate = useNavigate(); //导航到其他页面
-  const defaultResultTypes = ["法律法规", "裁判文书"];
+  const defaultResultTypes = ["法律法规", "裁判文书", "法律观点"];
   const [searchType, setSearchType] = useState<number>(0); //搜索类型
   const [input, setInput] = useState<string>("");
   const [ifPop, setPop] = useState<boolean>(false);
