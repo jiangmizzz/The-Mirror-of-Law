@@ -96,6 +96,8 @@ const App: React.FC = () => {
       //登出成功
       userStore.logout();
       message.success("退出登录成功!");
+      // 手动刷新页面
+      location.reload();
     } else {
       message.error(
         "退出登录失败!" + logoutRes.errorCode + ": " + logoutRes.errorMessage
