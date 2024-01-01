@@ -9,6 +9,7 @@ import {
   MinusOutlined,
 } from "@ant-design/icons";
 import "./KnowledgeMap.css";
+import Paragraph from "antd/es/typography/Paragraph";
 
 interface KnowledgeMapProps {
   center: NodeInfo; //中心词条
@@ -114,7 +115,10 @@ export default function KnowledgeMap(props: KnowledgeMapProps) {
         </Tooltip>
       </Space>
       <Divider style={{ margin: "1em 0" }}></Divider>
-      <div>{props.desc}</div>
+      {props.desc.split("\n").map((para) => {
+        return <Paragraph>{para}</Paragraph>;
+      })}
+      {/* <div>{props.desc}</div> */}
       <div
         style={{
           //   background: "#0E1155",
