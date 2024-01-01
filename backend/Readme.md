@@ -19,7 +19,7 @@
 spring.elasticsearch.uris=<127.0.0.1>
 spring.elasticsearch.username=<username>
 spring.elasticsearch.password=<password>
-spring.datasource.url=jdbc:mysql://<127.0.0.1>:3306/mirror_of_law?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false
+spring.datasource.url=jdbc:mysql://<127.0.0.1>:3306/mirror_of_law?serverTimezone=Asia/Shanghai&useUnicode=true&allowPublicKeyRetrieval=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false
 spring.datasource.username=<username>
 spring.datasource.password=<password>
 spark-model.appid=<appid>
@@ -35,10 +35,9 @@ spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 spring.datasource.type=com.alibaba.druid.pool.DruidDataSource
 spring.datasource.druid.initial-size=1
 mybatis-plus.configuration.map-underscore-to-camel-case=true
-mybatis-plus.configuration.log-impl=org.apache.ibatis.logging.stdout.StdOutImpl
+mybatis-plus.configuration.log-impl=org.apache.ibatis.logging.slf4j.Slf4jImpl
 mybatis-plus.configuration.aggressive-lazy-loading=true
 mybatis-plus.global-config.db-config.id-type=AUTO
-
 logging.level.root=INFO
 logging.file.name=logs/TheMirrorOfLaw.log
 springdoc.api-docs.path=/api-docs
@@ -46,6 +45,8 @@ springdoc.swagger-ui.path=/swagger-ui.html
 springdoc.default-consumes-media-type=application/json
 springdoc.default-produces-media-type=application/json
 #-----FOR DEBUGGING-----#
+logging.level.com.baomidou.mybatisplus=DEBUG
+logging.level.team.semg04.themirroroflaw.user.mapper=DEBUG
 logging.level.team.semg04.themirroroflaw=DEBUG
 #-----------------------#
 ```

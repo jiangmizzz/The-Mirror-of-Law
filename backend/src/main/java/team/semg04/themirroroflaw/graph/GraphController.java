@@ -1,5 +1,6 @@
 package team.semg04.themirroroflaw.graph;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -13,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import team.semg04.themirroroflaw.Response;
+import team.semg04.themirroroflaw.ai.SparkModelConnector;
 import team.semg04.themirroroflaw.graph.entity.Graph;
 import team.semg04.themirroroflaw.graph.service.GraphService;
 
@@ -23,11 +25,23 @@ import java.util.*;
 @RequestMapping("/api/graph")
 @Tag(name = "Graph", description = "知识图谱")
 public class GraphController {
+    private static final String findNodePrompt =
+            "请你根据我所给出的文字内容，判断下面列表中哪个关键词最为相关，并仅以关联度最大的一个关键词作为你的回答，不要掺杂其他的文字。关键词列表如下：\n";
     private final GraphService graphService;
+    private List<String> graphNodeValues;
 
     @Autowired
     public GraphController(GraphService graphService) {
         this.graphService = graphService;
+//        init();
+    }
+
+    private void init() {
+        List<Graph> graphNodes = graphService.list();
+        graphNodeValues = new ArrayList<>();
+        for (Graph graphNode : graphNodes) {
+            graphNodeValues.add(graphNode.getValue());
+        }
     }
 
     @Operation(summary = "新增节点", description = "新增节点。")
@@ -71,6 +85,26 @@ public class GraphController {
         }
     }
 
+    private String findNode(String content) {
+        String defaultNode = "法律";
+        String result;
+        try {
+            if (content.length() >= 2048) {
+                return defaultNode;
+            }
+            result =
+                    SparkModelConnector.getAnswer(findNodePrompt + graphNodeValues.toString() + "\n我输入的文字内容如下：\n" + content);
+            log.debug("Graph node find: {}", result);
+            if (result.isEmpty()) {
+                return defaultNode;
+            }
+            return result;
+        } catch (Exception e) {
+            log.error("Graph node find error: ", e);
+            return defaultNode;
+        }
+    }
+
     @Operation(summary = "获取知识图谱结构", description = "⽤⼾每次进⾏搜索，或者点击切换知识图谱中的中⼼节点，都需要获取新的知识图谱结构，以\n" +
             "渲染出新的知识图谱。其中，若为每次搜索后⾃动产⽣的知识图谱，则其中⼼词由输⼊内容分析得出。")
     @ApiResponses(value = {
@@ -80,11 +114,15 @@ public class GraphController {
     @GetMapping("/get")
     public ResponseEntity<Response<ResponseGraph>> get(@RequestParam String input, @RequestParam Integer depth) {
         try {
-            Graph graph = graphService.getByValue(input);
+//            Graph graph = graphService.getByValue(findNode(input));
+
+            QueryWrapper<Graph> queryWrapper = new QueryWrapper<>();
+            queryWrapper.like("value", input);
+            queryWrapper.last("limit 1");
+            Graph graph = graphService.getOne(queryWrapper);
             if (graph == null) {
                 log.warn("Graph not found: {}", input);
-                return new ResponseEntity<>(new Response<>(false, null, HttpStatus.NOT_FOUND.value(), "Center not " +
-                        "found."), HttpStatus.NOT_FOUND);
+                graph = graphService.getByValue("法律");
             }
 
             ResponseNodeInfo center = new ResponseNodeInfo(graph.getId().toString(), graph.getValue(), null);

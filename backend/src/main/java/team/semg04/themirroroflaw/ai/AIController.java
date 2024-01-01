@@ -20,8 +20,6 @@ import org.springframework.web.bind.annotation.RestController;
 import team.semg04.themirroroflaw.Response;
 import team.semg04.themirroroflaw.search.entity.MirrorOfLaw;
 
-import java.util.List;
-
 @Slf4j
 @RestController
 @RequestMapping("/api/ai")
@@ -87,7 +85,7 @@ public class AIController {
         String tooLongMessage = "文档内容过长，已自动截取部分内容进行总结：\n";
         String sensitiveMessage = "文档可能包含敏感信息，无法进行总结！";
         try {
-            if (typeInt >= 0 && typeInt <=3) {
+            if (typeInt >= 0 && typeInt <= 3) {
                 MirrorOfLaw laws = elasticsearchOperations.get(id, MirrorOfLaw.class);
                 if (laws == null) {
                     log.error("Get search result detail error: Document not found. Id: " + id);
@@ -138,14 +136,14 @@ public class AIController {
         String tooLongMessage = "输入内容过长，已自动截取部分内容进行总结：\n";
         String sensitiveMessage = "输入内容可能包含敏感信息，无法进行总结！";
         try {
-                if (content.length() >= 4096 - summarizePrompt.length()) {
-                    content = content.substring(0, 4096 - summarizePrompt.length());
-                    tooLong = true;
-                }
-                result = SparkModelConnector.getAnswer(summarizePrompt + content);
-                if (result.isEmpty()) {
-                    return new ResponseEntity<>(new Response<>(true, sensitiveMessage, 0, ""), HttpStatus.OK);
-                }
+            if (content.length() >= 4096 - summarizePrompt.length()) {
+                content = content.substring(0, 4096 - summarizePrompt.length());
+                tooLong = true;
+            }
+            result = SparkModelConnector.getAnswer(summarizePrompt + content);
+            if (result.isEmpty()) {
+                return new ResponseEntity<>(new Response<>(true, sensitiveMessage, 0, ""), HttpStatus.OK);
+            }
             if (!tooLong) {
                 return new ResponseEntity<>(new Response<>(true, result, 0, ""), HttpStatus.OK);
             } else {
@@ -155,25 +153,6 @@ public class AIController {
         } catch (Exception e) {
             return new ResponseEntity<>(new Response<>(false, null, HttpStatus.INTERNAL_SERVER_ERROR.value(),
                     "Internal server error."), HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    private static final String findNodePrompt = "请你根据我所给出的文字内容，判断下面列表中哪个关键词最为相关，并仅以关联度最大的一个关键词作为你的回答，不要掺杂其他的文字。关键词列表如下：\n";
-    public String findNode(String content) {
-        String defaultNode = "法律";
-        String result;
-        List<String> nodes = List.of(new String[]{"民法典", "刑法"});
-        try {
-            if (content.length() >= 2048) {
-                return defaultNode;
-            }
-            result = SparkModelConnector.getAnswer(findNodePrompt + nodes.toString() + "\n我输入的文字内容如下：\n" + content);
-            if (result.isEmpty()) {
-                return defaultNode;
-            }
-            return result;
-        } catch (Exception e) {
-            return defaultNode;
         }
     }
 }
