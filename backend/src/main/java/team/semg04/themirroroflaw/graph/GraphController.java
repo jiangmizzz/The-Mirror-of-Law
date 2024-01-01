@@ -112,7 +112,7 @@ public class GraphController {
             @ApiResponse(responseCode = "500", description = "服务器内部错误")
     })
     @GetMapping("/get")
-    public ResponseEntity<Response<ResponseGraph>> get(@RequestParam String input, @RequestParam Integer depth) {
+    public ResponseEntity<Response<ResponseGraph>> get(@RequestParam(name = "input") String input, @RequestParam(name = "depth") Integer depth) {
         try {
 //            Graph graph = graphService.getByValue(findNode(input));
 
