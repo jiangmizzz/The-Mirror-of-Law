@@ -174,7 +174,7 @@ public class PersonalController {
             @Schema(implementation = Response.class)))
     })
     @GetMapping("/recommends")
-    public ResponseEntity<Response<List<Recommend>>> recommends(@RequestParam(required = false, defaultValue = "10") Integer reqNumber,
+    public ResponseEntity<Response<List<Recommend>>> recommends(@RequestParam(required = false, defaultValue = "10", name = "reqNumber") Integer reqNumber,
                                                                 HttpServletRequest request,
                                                                 HttpServletResponse response) {
         try {
