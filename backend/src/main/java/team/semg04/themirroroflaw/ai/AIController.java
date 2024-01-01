@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RestController;
 import team.semg04.themirroroflaw.Response;
 import team.semg04.themirroroflaw.search.entity.MirrorOfLaw;
 
+import java.util.List;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/ai")
@@ -156,5 +158,22 @@ public class AIController {
         }
     }
 
-
+    private static final String findNodePrompt = "请你根据我所给出的文字内容，判断下面列表中哪个关键词最为相关，并仅以关联度最大的一个关键词作为你的回答，不要掺杂其他的文字。关键词列表如下：\n";
+    public String findNode(String content) {
+        String defaultNode = "法律";
+        String result;
+        List<String> nodes = List.of(new String[]{"民法典", "刑法"});
+        try {
+            if (content.length() >= 2048) {
+                return defaultNode;
+            }
+            result = SparkModelConnector.getAnswer(findNodePrompt + nodes.toString() + "\n我输入的文字内容如下：\n" + content);
+            if (result.isEmpty()) {
+                return defaultNode;
+            }
+            return result;
+        } catch (Exception e) {
+            return defaultNode;
+        }
+    }
 }
