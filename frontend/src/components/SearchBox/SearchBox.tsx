@@ -379,6 +379,8 @@ export default function SearchBox(props: {
     const params = new URLSearchParams(paramsObj);
     // console.log("search!", params.toString());
     navigate(`/results?${params}`);
+    // 手动刷新页面
+    location.reload();
   }
   return (
     <>
