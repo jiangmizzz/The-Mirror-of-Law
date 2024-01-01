@@ -78,7 +78,7 @@ public class SearchController {
         init();
     }
 
-    public void init() {
+    private void init() {
         Script allScript = Script.builder().withId("search_by_all").withLanguage("mustache").withSource("""
                 {
                   "_source": {
